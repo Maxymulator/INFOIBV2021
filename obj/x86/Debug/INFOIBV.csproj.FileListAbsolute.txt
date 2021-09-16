@@ -1,0 +1,9 @@
+D:\School\INFOIBV2021\bin\Debug\INFOIBV.exe
+D:\School\INFOIBV2021\bin\Debug\INFOIBV.pdb
+D:\School\INFOIBV2021\obj\x86\Debug\INFOIBV.csproj.AssemblyReference.cache
+D:\School\INFOIBV2021\obj\x86\Debug\INFOIBV.INFOIBV.resources
+D:\School\INFOIBV2021\obj\x86\Debug\INFOIBV.Properties.Resources.resources
+D:\School\INFOIBV2021\obj\x86\Debug\INFOIBV.csproj.GenerateResource.cache
+D:\School\INFOIBV2021\obj\x86\Debug\INFOIBV.csproj.CoreCompileInputs.cache
+D:\School\INFOIBV2021\obj\x86\Debug\INFOIBV.exe
+D:\School\INFOIBV2021\obj\x86\Debug\INFOIBV.pdb

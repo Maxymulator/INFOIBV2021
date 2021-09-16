@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace INFOIBV
 {
@@ -60,7 +62,15 @@ namespace INFOIBV
             // Alternatively you can create buttons to invoke certain functionality
             // ====================================================================
 
+            Stopwatch stopwatch = Stopwatch.StartNew();
             byte[,] workingImage = convertToGrayscale(Image);          // convert image to grayscale
+            //workingImage = invertImage(workingImage);
+            
+            stopwatch = Stopwatch.StartNew();
+            workingImage = convolveImageParallel(workingImage, createGaussianFilter(9, 10f));
+            stopwatch.Stop();
+            Debug.WriteLine($@"Total time in milliseconds : {stopwatch.ElapsedMilliseconds}");
+
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -135,7 +145,13 @@ namespace INFOIBV
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
-            // TODO: add your functionality and checks
+            for (int y = 0; (y <= (tempImage.GetLength(1) - 1)); y++)
+            {
+                for (int x = 0; (x <= (tempImage.GetLength(0) - 1)); x++)
+                {
+                    tempImage[x, y] = (byte)(255 - inputImage[x, y]);
+                }
+            }
 
             return tempImage;
         }
@@ -150,25 +166,97 @@ namespace INFOIBV
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-
-            // TODO: add your functionality and checks
+            int[] histrogramValues = new int[256];
+            int nPixels = inputImage.GetLength(0) * inputImage.GetLength(1);
+            //0.1 = 10% 
+            double percentageIgnoredValues = 0.1;
+            int amountIgnoredPixels = (int)(nPixels * percentageIgnoredValues);
+            //Count all the histrogram values
+            for (int y = 0; (y < (inputImage.GetLength(1))); y++)
+            {
+                for (int x = 0; (x < (inputImage.GetLength(0))); x++)
+                {
+                    histrogramValues[inputImage[x, y]]++;
+                }
+            }
+            //ignore the right amount of pixels and find the higest
+            int ignoredPixels = 0;
+            int i = 255;
+            while (ignoredPixels < amountIgnoredPixels)
+            {
+                ignoredPixels += histrogramValues[i];
+                i--;
+            }
+            byte aHigh = (byte)(i+1);
+            //ignore the right amount of pixels and find the lowest
+            ignoredPixels = 0;
+            i = 0;
+            while (ignoredPixels < amountIgnoredPixels)
+            {
+                ignoredPixels += histrogramValues[i];
+                i++;
+            }
+            byte aLow = (byte)(i - 1);
+            //calculate new values
+            for (int y = 0; (y < (inputImage.GetLength(1))); y++)
+            {
+                for (int x = 0; (x < (inputImage.GetLength(0))); x++)
+                {
+                    if(inputImage[x, y] > aHigh)
+                        tempImage[x, y] = 255;
+                    else if (inputImage[x, y] < aLow)
+                        tempImage[x, y] = 0;
+                    else
+                        tempImage[x, y] = (byte)((inputImage[x, y] - aLow) * (255 / (aHigh - aLow)));
+                }
+            }
 
             return tempImage;
         }
 
+        //private const int filterRoundingDelta = 1000;
 
         /*
          * createGaussianFilter: create a Gaussian filter of specific square size and with a specified sigma
          * input:   size                length and width of the Gaussian filter (only odd sizes)
-         *          sigma               standard deviation of the Gaussian distribution
+         *          sigma               standard deviation of the Gaussian distribution // larger -> more spread out
          * output:                      Gaussian filter
          */
         private float[,] createGaussianFilter(byte size, float sigma)
         {
-            // create temporary grayscale image
+            // check if the size is odd
+            if (size % 2 == 0)
+                throw new ArgumentException("createGaussianFilter, size was even");
+
+            // calculate the size delta
+            int sizeDelta = size / 2;
+
+            // create the filter kernel
             float[,] filter = new float[size, size];
 
-            // TODO: add your functionality and checks
+            // create the Gaussian filter
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                int kernelX = Math.Abs(x - sizeDelta);
+                int kernelY = Math.Abs(y - sizeDelta);
+                filter[x, y] = 1 / (2 * (float) Math.PI * (sigma * sigma)) *
+                               (float) Math.Pow(Math.E,
+                                   -((kernelX * kernelX + kernelY * kernelY) / (2 * (sigma * sigma))));
+            }
+
+            // calculate the normalizing multiplier of the kernel
+            float kernelSum = 0.0f;
+            foreach (var f in filter)
+                kernelSum += f;
+            float kernelMult = 1.0f / kernelSum;
+
+            // normalize the kernel
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                filter[x, y] *= kernelMult;
+            }
 
             return filter;
         }
@@ -185,9 +273,109 @@ namespace INFOIBV
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
-            // TODO: add your functionality and checks, think about border handling and type conversion
+            // store the size of the filter
+            int filterSize = filter.GetLength(0);
+            // calculate the size delta
+            int filterSizeDelta = filterSize / 2;
 
+            // loop over the input image
+            for (int y = 0; y < inputImage.GetLength(1); y++)
+            for (int x = 0; x < inputImage.GetLength(0); x++)
+            {
+                tempImage[x, y] = ApplyKernel(x, y);
+            }
+            
             return tempImage;
+
+            // apply the kernel to the given pixel
+            byte ApplyKernel(int x, int y)
+            {
+                // create a new pixel
+                byte newPixel = 0;
+                
+                // loop over the filter kernel, adding the values to newPixel during execution
+                for(int kx = 0; kx < filterSize; kx++)
+                for (int ky = 0; ky < filterSize; ky++)
+                {
+                    newPixel += (byte) (filter[kx, ky] * inputImage[GetRefImageX(x, kx), GetRefImageY(y, ky)]);
+                }
+                return newPixel;
+            }
+
+            // get the x value of the image for the kernel application, mirroring the image if the edge is exceeded
+            int GetRefImageX(int x, int kx)
+            {
+                int n = x + (kx - filterSizeDelta); // get the actual input image pixel
+                if (n < 0) return Math.Abs(n); // off the left side of the image
+                if (n >= inputImage.GetLength(0)) return inputImage.GetLength(0) - kx; // off the right side of the image
+                return n; // in the image
+            }
+            
+            // get the y value of the image for the kernel application, mirroring the image if the edge is exceeded
+            int GetRefImageY(int y, int ky)
+            {
+                int n = y + (ky - filterSizeDelta); // get the actual input image pixel
+                if (n < 0) return Math.Abs(n); // off the top of the image
+                if (n >= inputImage.GetLength(1)) return inputImage.GetLength(1) - ky; // off the bottom of the image
+                return n; // in the image
+            }
+        }
+
+        private byte[,] convolveImageParallel(byte[,] inputImage, float[,] filter)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            // store the size of the filter
+            int filterSize = filter.GetLength(0);
+            // calculate the size delta
+            int filterSizeDelta = filterSize / 2;
+
+            // loop over the input image in parallel
+            ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
+            {
+                int inputX = index % inputImage.GetLength(0); // gets the x coord from the loop index
+                int inputY = index / inputImage.GetLength(0); // gets the y coord from the loop index
+                tempImage[inputX, inputY] = ApplyKernel(inputX, inputY); // thread-safe because no thread writes to the same place in the target array
+            });
+
+            if (!loopResult.IsCompleted)
+                throw new Exception($"consolveImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
+            
+            return tempImage;
+
+            // apply the kernel to the given pixel
+            byte ApplyKernel(int x, int y)
+            {
+                // create a new pixel
+                byte newPixel = 0;
+                
+                // loop over the filter kernel, adding the values to newPixel during execution
+                for(int kx = 0; kx < filterSize; kx++)
+                for (int ky = 0; ky < filterSize; ky++)
+                {
+                    newPixel += (byte) (filter[kx, ky] * inputImage[GetRefImageX(x, kx), GetRefImageY(y, ky)]);
+                }
+                return newPixel;
+            }
+
+            // get the x value of the image for the kernel application, mirroring the image if the edge is exceeded
+            int GetRefImageX(int x, int kx)
+            {
+                int n = x + (kx - filterSizeDelta); // get the actual input image pixel
+                if (n < 0) return Math.Abs(n); // off the left side of the image
+                if (n >= inputImage.GetLength(0)) return inputImage.GetLength(0) - kx; // off the right side of the image
+                return n; // in the image
+            }
+            
+            // get the y value of the image for the kernel application, mirroring the image if the edge is exceeded
+            int GetRefImageY(int y, int ky)
+            {
+                int n = y + (ky - filterSizeDelta); // get the actual input image pixel
+                if (n < 0) return Math.Abs(n); // off the top of the image
+                if (n >= inputImage.GetLength(1)) return inputImage.GetLength(1) - ky; // off the bottom of the image
+                return n; // in the image
+            }
         }
 
 
