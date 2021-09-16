@@ -67,7 +67,8 @@ namespace INFOIBV
             //workingImage = invertImage(workingImage);
             
             stopwatch = Stopwatch.StartNew();
-            workingImage = convolveImageParallel(workingImage, createGaussianFilter(9, 10f));
+            //workingImage = convolveImageParallel(workingImage, createGaussianFilter(9, 10f));
+            workingImage = medianFilter(workingImage, 5);
             stopwatch.Stop();
             Debug.WriteLine($@"Total time in milliseconds : {stopwatch.ElapsedMilliseconds}");
 
@@ -389,8 +390,30 @@ namespace INFOIBV
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            int boundryPixels = size / 2;
 
-            // TODO: add your functionality and checks, think about border handling and type conversion
+            for (int y = boundryPixels; y < (inputImage.GetLength(1) - boundryPixels); y++)
+            {
+                for (int x = boundryPixels; x < (inputImage.GetLength(0) - boundryPixels); x++)
+                {
+                    //Add all kernel Values to a list
+                    List<byte> kernelValues = new List<byte>();
+                    for (int yK = y-boundryPixels; yK <= y+boundryPixels; yK++)
+                    {
+                        for (int xK = x-boundryPixels; xK <= x+boundryPixels; xK++)
+                        {
+                            kernelValues.Add(inputImage[xK, yK]);
+                        }
+                    }
+                    //sort list
+                    kernelValues.Sort();
+
+                    int medianIndex = (int)Math.Ceiling(((double)(size * size) / 2));
+
+                    tempImage[x, y] = kernelValues[medianIndex];
+
+                }
+            }
 
             return tempImage;
         }
