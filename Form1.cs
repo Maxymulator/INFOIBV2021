@@ -347,12 +347,14 @@ namespace INFOIBV
             int filterSize = filter.GetLength(0);
             // calculate the size delta
             int filterSizeDelta = filterSize / 2;
+            // get the x size of the input image
+            int inputXSize = inputImage.GetLength(0)
 
             // loop over the input image in parallel
             ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
             {
-                int inputX = index % inputImage.GetLength(0); // gets the x coord from the loop index
-                int inputY = index / inputImage.GetLength(0); // gets the y coord from the loop index
+                int inputX = index % inputXSize; // gets the x coord from the loop index
+                int inputY = index / inputXSize; // gets the y coord from the loop index
                 tempImage[inputX, inputY] = ApplyKernel(inputX, inputY); // thread-safe because no thread writes to the same place in the target array
             });
 
@@ -397,9 +399,9 @@ namespace INFOIBV
                 {
                     //Add all kernel Values to a list
                     List<byte> kernelValues = new List<byte>();
-                    for (int yK = y-boundryPixels; yK <= y+boundryPixels; yK++)
+                    for (int yK = y - boundryPixels; yK <= y + boundryPixels; yK++)
                     {
-                        for (int xK = x-boundryPixels; xK <= x+boundryPixels; xK++)
+                        for (int xK = x - boundryPixels; xK <= x + boundryPixels; xK++)
                         {
                             kernelValues.Add(inputImage[xK, yK]);
                         }
@@ -413,6 +415,49 @@ namespace INFOIBV
 
                 }
             }
+
+            return tempImage;
+        }
+
+        private byte[,] medianFilterParallel(byte[,] inputImage, byte size)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            int boundryPixels = size / 2;
+
+            // calculate the size delta
+            int filterSizeDelta = size / 2;
+            // get the x size of the input image
+            int inputXSize = inputImage.GetLength(0)
+
+            // loop over the input image in parallel
+            ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
+            {
+                int inputX = index % inputXSize; // gets the x coord from the loop index
+                int inputY = index / inputXSize; // gets the y coord from the loop index
+
+                //Add all kernel Values to a list
+                List<byte> kernelValues = new List<byte>();
+                for (int yK = inputY - boundryPixels; yK <= inputY + boundryPixels; yK++)
+                {
+                    for (int xK = inputX - boundryPixels; xK <= inputX + boundryPixels; xK++)
+                    {
+                        
+                        kernelValues.Add(inputImage[GetRefImageX(xK), yK]);
+                    }
+                }
+                //sort list
+                kernelValues.Sort();
+
+                int medianIndex = (int)Math.Ceiling(((double)(size * size) / 2));
+
+                tempImage[x, y] = kernelValues[medianIndex];
+            });
+
+            if (!loopResult.IsCompleted)
+                throw new Exception($"consolveImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
+
+            
 
             return tempImage;
         }
