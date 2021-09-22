@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace INFOIBV
 {
@@ -37,7 +33,7 @@ namespace INFOIBV
                     InputImage.Size.Height > 512 || InputImage.Size.Width > 512) // dimension check (may be removed or altered)
                     MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
                 else
-                    pictureBox1.Image = (Image) InputImage;                 // display input image
+                    pictureBox1.Image = InputImage;                 // display input image
             }
         }
 
@@ -64,11 +60,14 @@ namespace INFOIBV
 
             Stopwatch stopwatch = Stopwatch.StartNew();
             byte[,] workingImage = convertToGrayscale(Image);          // convert image to grayscale
+            workingImage = convolveImageParallel(workingImage, createGaussianFilter(5, 10f));
+            workingImage = edgeMagnitude(workingImage, GetSobelHorizontal(), GetSobelVertical());
+            //workingImage = thresholdImage(workingImage, 127);
             //workingImage = invertImage(workingImage);
             
             stopwatch = Stopwatch.StartNew();
             //workingImage = convolveImageParallel(workingImage, createGaussianFilter(9, 10f));
-            workingImage = thresholdImage(workingImage, 127);
+            //workingImage = thresholdImage(workingImage, 127);
 
             stopwatch.Stop();
             Debug.WriteLine($@"Total time in milliseconds : {stopwatch.ElapsedMilliseconds}");
@@ -85,7 +84,7 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
             
-            pictureBox2.Image = (Image)OutputImage;                         // display output image
+            pictureBox2.Image = OutputImage;                         // display output image
         }
 
 
@@ -465,13 +464,125 @@ namespace INFOIBV
 
             return tempImage;
         }
+        
+        #region Edge Detection Kernals
+        /// <summary>
+        /// Get the horizontal Prewitt kernel
+        /// </summary>
+        private sbyte[,] GetPrewittHorizontal() => new sbyte[3,3]
+        {
+            {-1, 0, 1}, 
+            {-1, 0, 1}, 
+            {-1, 0, 1}
+        };
+        
+        /// <summary>
+        /// Get the vertical Prewitt kernel
+        /// </summary>
+        private sbyte[,] GetPrewittVertical() => new sbyte[3,3]
+        {
+            {-1, -1, -1}, 
+            {0, 0, 1}, 
+            {1, 1, 1}
+        };
+        
+        /// <summary>
+        /// Get the horizontal Sobel kernel
+        /// </summary>
+        private sbyte[,] GetSobelHorizontal() => new sbyte[3,3]
+        {
+            {-1, 0, 1}, 
+            {-2, 0, 2}, 
+            {-1, 0, 1}
+        };
+        
+        /// <summary>
+        /// Get the vertical Sobel kernel
+        /// </summary>
+        private sbyte[,] GetSobelVertical() => new sbyte[3,3]
+        {
+            {-1, -2, -1}, 
+            {0, 0, 1}, 
+            {1, 2, 1}
+        };
 
+        /// <summary>
+        /// Get the needed kernels for the extended Sobel compass operation
+        /// </summary>
+        private sbyte[][,] GetExtendedSobelCompassKernels()
+        {
+            return new[] { ExtSobelMidLeftToMidRight(), ExtSobelTopLeftToBotRight(), ExtSobelTopToBot(), ExtSobelTopRightToBotLeft()};
 
+            sbyte[,] ExtSobelMidLeftToMidRight() => new sbyte[,]
+            {
+                {-1, 0, 1},
+                {-2, 0, 2},
+                {-1, 0, 1}
+            };
+            
+            sbyte[,] ExtSobelTopLeftToBotRight() => new sbyte[,]
+            {
+                {-2, -1, 0},
+                {-1, 0, 1},
+                {0, -1, 2}
+            };
+            
+            sbyte[,] ExtSobelTopToBot() => new sbyte[,]
+            {
+                {-1, -2, -1},
+                {0, 0, 0},
+                {1, 2, 1}
+            };
+            
+            sbyte[,] ExtSobelTopRightToBotLeft() => new sbyte[,]
+            {
+                {0, -1, -2},
+                {1, 0, -1},
+                {2, 1, 0}
+            };
+        }
+        /// <summary>
+        /// Get the needed kernels for the extended Sobel compass operation
+        /// </summary>
+        private sbyte[][,] GetKirchCompassKernals()
+        {
+            return new[] { KirchMidLeftToMidRight(), KirchTopLeftToBotRight(), KirchTopToBot(), KirchTopRightToBotLeft()};
+
+            sbyte[,] KirchMidLeftToMidRight() => new sbyte[,]
+            {
+                {-5, 3, 3},
+                {-5, 0, 3},
+                {-5, 3, 3}
+            };
+            
+            sbyte[,] KirchTopLeftToBotRight() => new sbyte[,]
+            {
+                {-5, -5, 3},
+                {-5, 0, 3},
+                {3, 3, 3}
+            };
+            
+            sbyte[,] KirchTopToBot() => new sbyte[,]
+            {
+                {-5, -5, -5},
+                {3, 0, 3},
+                {3, 3, 3}
+            };
+            
+            sbyte[,] KirchTopRightToBotLeft() => new sbyte[,]
+            {
+                {3, -5, -5},
+                {3, 0, -5},
+                {3, 3, 3}
+            };
+        }
+#endregion
+        
         /*
          * edgeMagnitude: calculate the image derivative of an input image and a provided edge kernel
          * input:   inputImage          single-channel (byte) image
          *          horizontalKernel    horizontal edge kernel
-         *          virticalKernel      vertical edge kernel
+         *          verticalKernel      vertical edge kernel
          * output:                      single-channel (byte) image
          */
         private byte[,] edgeMagnitude(byte[,] inputImage, sbyte[,] horizontalKernel, sbyte[,] verticalKernel)
@@ -480,8 +591,98 @@ namespace INFOIBV
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
             // TODO: add your functionality and checks, think about border handling and type conversion (negative values!)
+            // store the size of the filter
+            int filterSize = verticalKernel.GetLength(0);
+            // calculate the size delta
+            int filterSizeDelta = filterSize / 2;
+
+            // loop over the input image
+            for (int y = 0; y < inputImage.GetLength(1); y++)
+            for (int x = 0; x < inputImage.GetLength(0); x++)
+            {
+                tempImage[x, y] = (byte) ApplyKernel(x, y);
+            }
+            
+            return tempImage;
+
+            // apply the kernel to the given pixel
+            sbyte ApplyKernel(int x, int y)
+            {
+                // create a new pixel
+                sbyte newPixel = 0;
+                
+                // loop over the filter kernel, adding the values to newPixel during execution
+                for(int kx = 0; kx < filterSize; kx++)
+                for (int ky = 0; ky < filterSize; ky++)
+                {
+                    newPixel += (sbyte) (verticalKernel[kx, ky] * 
+                                        inputImage[GetRefImageX(x, kx, filterSizeDelta, inputImage.GetLength(0))
+                                            , GetRefImageY(y, ky, filterSizeDelta, inputImage.GetLength(1))]);
+                }
+                return newPixel;
+            }
 
             return tempImage;
+        }
+        
+        /*
+         * edgeMagnitude: calculate the image derivative of an input image and a provided edge kernel
+         * input:   inputImage          single-channel (byte) image
+         *          horizontalKernel    horizontal edge kernel
+         *          verticalKernel      vertical edge kernel
+         * output:                      single-channel (byte) image
+         */
+        private byte[,] edgeMagnitudeCompass(byte[,] inputImage, sbyte[][,] kernelArray)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            // store the size of the kernels, all kernels in the array are equally sized
+            int filterSize = kernelArray[0].GetLength(0);
+            // calculate the size delta
+            int filterSizeDelta = filterSize / 2;
+            // get the y size of the input image
+            int inputYSize = inputImage.GetLength(1);
+            // get the x size of the input image
+            int inputXSize = inputImage.GetLength(0);
+            
+            // loop over the input image
+            for (int y = 0; y < inputYSize; y++)
+            for (int x = 0; x < inputXSize; x++)
+            {
+                List<sbyte> kernelCalcs = new List<sbyte>();
+                foreach (sbyte[,] kernal in kernelArray)
+                    {
+                        kernelCalcs.Add(ApplyKernel(kernal, x, y));
+                    }
+                tempImage[x, y] = (byte) kernelCalcs.Max();
+            }
+            
+            return tempImage;
+
+            // apply the kernel to the given pixel
+            sbyte ApplyKernel(sbyte[,] kernel, int x, int y)
+            {
+                // create a new pixel
+                sbyte newPixel = 0;
+                
+                // loop over the filter kernel, adding the values to newPixel during execution
+                for(int kx = 0; kx < filterSize; kx++)
+                for (int ky = 0; ky < filterSize; ky++)
+                {
+                    newPixel += (sbyte) (kernel[kx, ky] * 
+                                         inputImage[GetRefImageX(x, kx, filterSizeDelta, inputXSize)
+                                             , GetRefImageY(y, ky, filterSizeDelta, inputYSize)]);
+                }
+                return newPixel;
+            }
+
+            sbyte SByteAbs(sbyte val)
+            {
+                if (val >= 0) return val;
+                if(val == sbyte.MinValue) return sbyte.MaxValue;
+                return (sbyte) -val;
+            }
         }
 
 
