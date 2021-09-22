@@ -67,8 +67,9 @@ namespace INFOIBV
             //workingImage = invertImage(workingImage);
             
             stopwatch = Stopwatch.StartNew();
-            //workingImage = convolveImageParallel(workingImage, createGaussianFilter(9, 10f));
-            workingImage = histrogramEqualization(workingImage);
+            workingImage = convolveImageParallel(workingImage, createGaussianFilter(3, 10f));
+            workingImage = edgeMagnitude(workingImage);
+            workingImage = thresholdImage(workingImage, 127);
 
             stopwatch.Stop();
             Debug.WriteLine($@"Total time in milliseconds : {stopwatch.ElapsedMilliseconds}");
@@ -474,14 +475,68 @@ namespace INFOIBV
          *          virticalKernel      vertical edge kernel
          * output:                      single-channel (byte) image
          */
-        private byte[,] edgeMagnitude(byte[,] inputImage, sbyte[,] horizontalKernel, sbyte[,] verticalKernel)
+
+        double[,] sobelX = new double[,]
+        {
+            { -1, 0, 1 },
+            { -2, 0, 2 },
+            { -1, 0, 1 }
+        };
+
+        double[,] sobelY = new double[,]
+        {
+            { 1, 2, 1 },
+            { 0, 0, 0 },
+            { -1, -2, -1 }
+        };
+        private byte[,] edgeMagnitude(byte[,] inputImage)
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
+            for (int y = 1; (y < tempImage.GetLength(1) - 1); y++)
+            {
+                for (int x = 1; (x < tempImage.GetLength(0) - 1); x++)
+                {
+                    double hor = calcValue(sobelY, calcKernel(x, y));
+                    double ver = calcValue(sobelX, calcKernel(x, y));
+                    hor = hor * hor;
+                    ver = ver * ver;
+                    double answer = Math.Sqrt(hor + ver);
+                    if (answer > 255)
+                        answer = 255;
+                    tempImage[x, y] = (byte)answer;
+
+                }
+            }
             // TODO: add your functionality and checks, think about border handling and type conversion (negative values!)
 
             return tempImage;
+
+            double calcValue(double[,] sobelKernel, byte[,] kernel)
+            {
+                double total = 0;
+                for (int y = 0; y < 3; y++)
+                {
+                    for (int x = 0; x < 3; x++)
+                    {
+                        total += sobelKernel[x, y] * (double)kernel[x, y];
+                    }
+                }
+
+                return total;
+            }
+
+            byte[,] calcKernel(int x, int y)
+            {
+                byte[,] kernel = new byte[,]
+                    {
+                        { inputImage[x-1,y-1], inputImage[x-1,y], inputImage[x-1,y+1]},
+                        { inputImage[x,y-1], inputImage[x,y], inputImage[x,y+1]},
+                        { inputImage[x+1,y-1], inputImage[x+1,y], inputImage[x+1,y+1] }
+                    };
+                return kernel;
+            }
         }
 
 
