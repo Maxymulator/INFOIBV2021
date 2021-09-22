@@ -67,7 +67,8 @@ namespace INFOIBV
             //workingImage = invertImage(workingImage);
             
             stopwatch = Stopwatch.StartNew();
-            workingImage = convolveImage(workingImage, createGaussianFilter(9, 10f));
+            //workingImage = convolveImageParallel(workingImage, createGaussianFilter(9, 10f));
+            workingImage = thresholdImage(workingImage, 127);
 
             stopwatch.Stop();
             Debug.WriteLine($@"Total time in milliseconds : {stopwatch.ElapsedMilliseconds}");
@@ -489,13 +490,22 @@ namespace INFOIBV
          * input:   inputImage          single-channel (byte) image
          * output:                      single-channel (byte) image with on/off values
          */
-        private byte[,] thresholdImage(byte[,] inputImage)
+        private byte[,] thresholdImage(byte[,] inputImage, byte thresholdValue)
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
             // TODO: add your functionality and checks, think about how to represent the binary values
-
+            for (int y = 0; (y < tempImage.GetLength(1)); y++)
+            {
+                for (int x = 0; (x < tempImage.GetLength(0)); x++)
+                {
+                    if (inputImage[x, y] > thresholdValue)
+                        tempImage[x, y] = 255;
+                    else
+                        tempImage[x, y] = 0;
+                }
+            }
             return tempImage;
         }
 
