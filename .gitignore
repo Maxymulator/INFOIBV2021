@@ -1,3 +1,6 @@
 
-obj/
-bin/
+obj/*
+bin/*
+*.cache
+*.exe
+.vs/INFOIBV/v16/.suo

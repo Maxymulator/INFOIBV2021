@@ -37,6 +37,89 @@ namespace INFOIBV
             }
         }
 
+        /// <summary>
+        /// process when user clicks the pipeline 1 button
+        /// </summary>
+        private void buttonPipeline1_Click(object sender, EventArgs e)
+        {
+            if (InputImage == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            OutputImage = new Bitmap(InputImage.Size.Width, InputImage.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage.Size.Width, InputImage.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+            // call pipeline 1
+            // convert image to grayscale
+            byte[,] workingImage = convertToGrayscale(Image);
+
+            // adjust the contrast
+            workingImage = adjustContrast(workingImage);
+
+            // apply gaussian filter
+            workingImage = convolveImageParallel(workingImage, createGaussianFilter(5, 10f));
+
+            // apply edge detection
+            workingImage = edgeMagnitude(workingImage);
+
+            // apply a threshold
+            workingImage = thresholdImage(workingImage, 80);
+
+            // copy array to output Bitmap
+            for (int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+
+            pictureBox2.Image = OutputImage;                                // display output image
+        }
+
+        /// <summary>
+        /// process when user clicks the pipeline 2 button
+        /// </summary>
+        private void buttonPipeline2_Click(object sender, EventArgs e)
+        {
+            if (InputImage == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            OutputImage = new Bitmap(InputImage.Size.Width, InputImage.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage.Size.Width, InputImage.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+            // call pipeline 2
+            // convert image to grayscale
+            byte[,] workingImage = convertToGrayscale(Image);
+
+            // adjust the contrast
+            workingImage = adjustContrast(workingImage);
+
+            // apply median filter
+            workingImage = medianFilterParallel(workingImage, 5);
+
+            // apply edge detection
+            workingImage = edgeMagnitude(workingImage);
+
+            // apply a threshold
+            workingImage = thresholdImage(workingImage, 80);
+
+            // copy array to output Bitmap
+            for (int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+
+            pictureBox2.Image = OutputImage;                         // display output image
+        }
 
         /*
          * applyButton_Click: process when user clicks "Apply" button
@@ -58,19 +141,10 @@ namespace INFOIBV
             // Alternatively you can create buttons to invoke certain functionality
             // ====================================================================
 
-            Stopwatch stopwatch = Stopwatch.StartNew();
             byte[,] workingImage = convertToGrayscale(Image);          // convert image to grayscale
-            //workingImage = thresholdImage(workingImage, 127);
-            //workingImage = invertImage(workingImage);
-            
-            stopwatch = Stopwatch.StartNew();
             workingImage = convolveImageParallel(workingImage, createGaussianFilter(3, 10f));
             workingImage = edgeMagnitude(workingImage);
             workingImage = thresholdImage(workingImage, 127);
-
-            stopwatch.Stop();
-            Debug.WriteLine($@"Total time in milliseconds : {stopwatch.ElapsedMilliseconds}");
-
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -608,7 +682,8 @@ namespace INFOIBV
 
             return tempImage;
         }
-        
+
+
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 2 GO HERE ==============
         // ====================================================================
@@ -617,6 +692,5 @@ namespace INFOIBV
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
-
     }
 }
