@@ -142,7 +142,7 @@ namespace INFOIBV
             // ====================================================================
 
             byte[,] workingImage = convertToGrayscale(Image);          // convert image to grayscale
-            workingImage = convolveImageParallel(workingImage, createGaussianFilter(3, 10f));
+            workingImage = convolveImageParallel(workingImage, createGaussianFilter(5, 9f));
             workingImage = edgeMagnitude(workingImage);
             workingImage = thresholdImage(workingImage, 127);
 
