@@ -67,8 +67,8 @@ namespace INFOIBV
             //workingImage = invertImage(workingImage);
             
             stopwatch = Stopwatch.StartNew();
-            //workingImage = convolveImageParallel(workingImage, createGaussianFilter(9, 10f));
-            workingImage = medianFilter(workingImage, 5);
+            workingImage = convolveImage(workingImage, createGaussianFilter(9, 10f));
+
             stopwatch.Stop();
             Debug.WriteLine($@"Total time in milliseconds : {stopwatch.ElapsedMilliseconds}");
 
@@ -285,7 +285,7 @@ namespace INFOIBV
         /// <param name="x">The y value of the input image</param>
         /// <param name="kx">The y value of the kernel</param>
         /// <param name="filterSizeDelta">The offset from the kernels center. Floor(kernelSize / 2)</param>
-        /// <param name="inputImageXLength">The amount of pixels in the input image's y direction</param>
+        /// <param name="inputImageYLength">The amount of pixels in the input image's y direction</param>
         /// <returns>The y coordinate which should be used in the reference image</returns>
         private int GetRefImageY(int y, int ky, int filterSizeDelta, int inputImageYLength)
         {
@@ -348,7 +348,7 @@ namespace INFOIBV
             // calculate the size delta
             int filterSizeDelta = filterSize / 2;
             // get the x size of the input image
-            int inputXSize = inputImage.GetLength(0)
+            int inputXSize = inputImage.GetLength(0);
 
             // loop over the input image in parallel
             ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
@@ -399,11 +399,13 @@ namespace INFOIBV
                 {
                     //Add all kernel Values to a list
                     List<byte> kernelValues = new List<byte>();
-                    for (int yK = y - boundryPixels; yK <= y + boundryPixels; yK++)
+                    for (int yK = 0; yK < size; yK++)
                     {
-                        for (int xK = x - boundryPixels; xK <= x + boundryPixels; xK++)
+                        for (int xK = 0; xK < size; xK++)
                         {
-                            kernelValues.Add(inputImage[xK, yK]);
+
+                            kernelValues.Add(inputImage[GetRefImageX(x, xK, boundryPixels, inputImage.GetLength(0)),
+                                                        GetRefImageY(y, yK, boundryPixels, inputImage.GetLength(1))]);
                         }
                     }
                     //sort list
@@ -423,12 +425,12 @@ namespace INFOIBV
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            int boundryPixels = size / 2;
+
 
             // calculate the size delta
             int filterSizeDelta = size / 2;
             // get the x size of the input image
-            int inputXSize = inputImage.GetLength(0)
+            int inputXSize = inputImage.GetLength(0);
 
             // loop over the input image in parallel
             ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
@@ -438,12 +440,13 @@ namespace INFOIBV
 
                 //Add all kernel Values to a list
                 List<byte> kernelValues = new List<byte>();
-                for (int yK = inputY - boundryPixels; yK <= inputY + boundryPixels; yK++)
+                for (int yK = 0; yK < size; yK++)
                 {
-                    for (int xK = inputX - boundryPixels; xK <= inputX + boundryPixels; xK++)
+                    for (int xK = 0; xK < size; xK++)
                     {
                         
-                        kernelValues.Add(inputImage[GetRefImageX(xK), yK]);
+                        kernelValues.Add(inputImage[GetRefImageX(inputX, xK, filterSizeDelta, inputImage.GetLength(0)), 
+                                                    GetRefImageY(inputY, yK, filterSizeDelta, inputImage.GetLength(1))]);
                     }
                 }
                 //sort list
@@ -451,7 +454,7 @@ namespace INFOIBV
 
                 int medianIndex = (int)Math.Ceiling(((double)(size * size) / 2));
 
-                tempImage[x, y] = kernelValues[medianIndex];
+                tempImage[inputX, inputY] = kernelValues[medianIndex];
             });
 
             if (!loopResult.IsCompleted)
