@@ -261,7 +261,39 @@ namespace INFOIBV
 
             return filter;
         }
-
+        
+        
+        /// <summary>
+        /// get the x value of the image for the kernel application, mirroring the image if the edge is exceeded
+        /// </summary>
+        /// <param name="x">The x value of the input image</param>
+        /// <param name="kx">The x value of the kernel</param>
+        /// <param name="filterSizeDelta">The offset from the kernels center. Floor(kernelSize / 2)</param>
+        /// <param name="inputImageXLength">The amount of pixels in the input image's x direction</param>
+        /// <returns>The x coordinate which should be used in the reference image</returns>
+        private int GetRefImageX(int x, int kx, int filterSizeDelta, int inputImageXLength)
+        {
+            int n = x + (kx - filterSizeDelta); // get the actual input image pixel
+            if (n < 0) return Math.Abs(n); // off the left side of the image
+            if (n >= inputImageXLength) return inputImageXLength - kx; // off the right side of the image
+            return n; // in the image
+        }
+            
+        /// <summary>
+        /// get the y value of the image for the kernel application, mirroring the image if the edge is exceeded
+        /// </summary>
+        /// <param name="x">The y value of the input image</param>
+        /// <param name="kx">The y value of the kernel</param>
+        /// <param name="filterSizeDelta">The offset from the kernels center. Floor(kernelSize / 2)</param>
+        /// <param name="inputImageXLength">The amount of pixels in the input image's y direction</param>
+        /// <returns>The y coordinate which should be used in the reference image</returns>
+        private int GetRefImageY(int y, int ky, int filterSizeDelta, int inputImageYLength)
+        {
+            int n = y + (ky - filterSizeDelta); // get the actual input image pixel
+            if (n < 0) return Math.Abs(n); // off the top of the image
+            if (n >= inputImageYLength) return inputImageYLength - ky; // off the bottom of the image
+            return n; // in the image
+        }
 
         /*
          * convolveImage: apply linear filtering of an input image
@@ -298,27 +330,11 @@ namespace INFOIBV
                 for(int kx = 0; kx < filterSize; kx++)
                 for (int ky = 0; ky < filterSize; ky++)
                 {
-                    newPixel += (byte) (filter[kx, ky] * inputImage[GetRefImageX(x, kx), GetRefImageY(y, ky)]);
+                    newPixel += (byte) (filter[kx, ky] * 
+                                        inputImage[GetRefImageX(x, kx, filterSizeDelta, inputImage.GetLength(0))
+                                            , GetRefImageY(y, ky, filterSizeDelta, inputImage.GetLength(1))]);
                 }
                 return newPixel;
-            }
-
-            // get the x value of the image for the kernel application, mirroring the image if the edge is exceeded
-            int GetRefImageX(int x, int kx)
-            {
-                int n = x + (kx - filterSizeDelta); // get the actual input image pixel
-                if (n < 0) return Math.Abs(n); // off the left side of the image
-                if (n >= inputImage.GetLength(0)) return inputImage.GetLength(0) - kx; // off the right side of the image
-                return n; // in the image
-            }
-            
-            // get the y value of the image for the kernel application, mirroring the image if the edge is exceeded
-            int GetRefImageY(int y, int ky)
-            {
-                int n = y + (ky - filterSizeDelta); // get the actual input image pixel
-                if (n < 0) return Math.Abs(n); // off the top of the image
-                if (n >= inputImage.GetLength(1)) return inputImage.GetLength(1) - ky; // off the bottom of the image
-                return n; // in the image
             }
         }
 
@@ -355,30 +371,13 @@ namespace INFOIBV
                 for(int kx = 0; kx < filterSize; kx++)
                 for (int ky = 0; ky < filterSize; ky++)
                 {
-                    newPixel += (byte) (filter[kx, ky] * inputImage[GetRefImageX(x, kx), GetRefImageY(y, ky)]);
+                    newPixel += (byte) (filter[kx, ky] * 
+                                        inputImage[GetRefImageX(x, kx, filterSizeDelta, inputImage.GetLength(0))
+                                            , GetRefImageY(y, ky, filterSizeDelta, inputImage.GetLength(1))]);
                 }
                 return newPixel;
             }
-
-            // get the x value of the image for the kernel application, mirroring the image if the edge is exceeded
-            int GetRefImageX(int x, int kx)
-            {
-                int n = x + (kx - filterSizeDelta); // get the actual input image pixel
-                if (n < 0) return Math.Abs(n); // off the left side of the image
-                if (n >= inputImage.GetLength(0)) return inputImage.GetLength(0) - kx; // off the right side of the image
-                return n; // in the image
-            }
-            
-            // get the y value of the image for the kernel application, mirroring the image if the edge is exceeded
-            int GetRefImageY(int y, int ky)
-            {
-                int n = y + (ky - filterSizeDelta); // get the actual input image pixel
-                if (n < 0) return Math.Abs(n); // off the top of the image
-                if (n >= inputImage.GetLength(1)) return inputImage.GetLength(1) - ky; // off the bottom of the image
-                return n; // in the image
-            }
         }
-
 
         /*
          * medianFilter: apply median filtering on an input image with a kernel of specified size
