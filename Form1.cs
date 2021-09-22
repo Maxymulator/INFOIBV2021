@@ -142,9 +142,10 @@ namespace INFOIBV
             // ====================================================================
 
             byte[,] workingImage = convertToGrayscale(Image);          // convert image to grayscale
-            workingImage = convolveImageParallel(workingImage, createGaussianFilter(5, 9f));
+            workingImage = convolveImageParallel(workingImage, createGaussianFilter(11, 13.2f));
             workingImage = edgeMagnitude(workingImage);
-            workingImage = thresholdImage(workingImage, 127);
+            workingImage = thresholdImage(workingImage, 100);
+            //TODO: set histogram equalization to be the default action
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -214,46 +215,72 @@ namespace INFOIBV
          * input:   inputImage          single-channel (byte) image
          * output:                      single-channel (byte) image
          */
+        //TODO: write summary
         private byte[,] invertImage(byte[,] inputImage)
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
-            for (int y = 0; (y <= (tempImage.GetLength(1) - 1)); y++)
+            // iterate over the pixels and invert them
+            for (int y = 0; y < tempImage.GetLength(1); y++)
+            for (int x = 0; x < tempImage.GetLength(0); x++)
+                tempImage[x, y] = (byte)(255 - inputImage[x, y]);
+
+            return tempImage;
+        }
+        
+        //TODO: write summary
+        private byte[,] invertImageParallel(byte[,] inputImage)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            // get the x size of the input image
+            int inputXSize = tempImage.GetLength(0);
+
+            // iterate over all pixels and invert them
+            ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
             {
-                for (int x = 0; (x <= (tempImage.GetLength(0) - 1)); x++)
-                {
-                    tempImage[x, y] = (byte)(255 - inputImage[x, y]);
-                }
-            }
+                int inputX = index % inputXSize; // gets the x coord from the loop index
+                int inputY = index / inputXSize; // gets the y coord from the loop index
+                tempImage[inputX, inputY] = (byte)(255 - inputImage[inputX, inputY]);
+            });
+            
+            // throw an error if any thread failed
+            if (!loopResult.IsCompleted)
+                throw new Exception($"invertImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
 
             return tempImage;
         }
 
 
-        /*
-         * adjustContrast: create an image with the full range of intensity values used
-         * input:   inputImage          single-channel (byte) image
-         * output:                      single-channel (byte) image
-         */
+        /// <summary>
+        /// Create an image with the full range of intensity values used
+        /// </summary>
+        /// <param name="inputImage">single-channel (byte) image</param>
+        /// <returns>single-channel (byte) image</returns>
         private byte[,] adjustContrast(byte[,] inputImage)
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             int[] histrogramValues = new int[256];
             int nPixels = inputImage.GetLength(0) * inputImage.GetLength(1);
-            //0.1 = 10% 
+            // 0.1 = 10% 
             double percentageIgnoredValues = 0.1;
             int amountIgnoredPixels = (int)(nPixels * percentageIgnoredValues);
-            //Count all the histrogram values
-            for (int y = 0; (y < (inputImage.GetLength(1))); y++)
+            
+            // get the x and y size of the input image
+            int inputXSize = tempImage.GetLength(0);
+            int inputYSize = tempImage.GetLength(1);
+            
+            // count all the histogram values
+            for (int y = 0; y < inputYSize; y++)
+            for (int x = 0; x < inputXSize; x++)
             {
-                for (int x = 0; (x < (inputImage.GetLength(0))); x++)
-                {
-                    histrogramValues[inputImage[x, y]]++;
-                }
+                histrogramValues[inputImage[x, y]]++;
             }
-            //ignore the right amount of pixels and find the higest
+
+            // ignore the right amount of pixels and find the highest
             int ignoredPixels = 0;
             int i = 255;
             while (ignoredPixels < amountIgnoredPixels)
@@ -262,7 +289,8 @@ namespace INFOIBV
                 i--;
             }
             byte aHigh = (byte)(i+1);
-            //ignore the right amount of pixels and find the lowest
+            
+            // ignore the right amount of pixels and find the lowest
             ignoredPixels = 0;
             i = 0;
             while (ignoredPixels < amountIgnoredPixels)
@@ -271,19 +299,85 @@ namespace INFOIBV
                 i++;
             }
             byte aLow = (byte)(i - 1);
-            //calculate new values
-            for (int y = 0; (y < (inputImage.GetLength(1))); y++)
+            
+            // calculate new values
+            for (int y = 0; y < inputYSize; y++)
+            for (int x = 0; x < inputXSize; x++)
             {
-                for (int x = 0; (x < (inputImage.GetLength(0))); x++)
-                {
-                    if(inputImage[x, y] > aHigh)
-                        tempImage[x, y] = 255;
-                    else if (inputImage[x, y] < aLow)
-                        tempImage[x, y] = 0;
-                    else
-                        tempImage[x, y] = (byte)((inputImage[x, y] - aLow) * (255 / (aHigh - aLow)));
-                }
+                if(inputImage[x, y] > aHigh)
+                    tempImage[x, y] = 255;
+                else if (inputImage[x, y] < aLow)
+                    tempImage[x, y] = 0;
+                else
+                    tempImage[x, y] = (byte)((inputImage[x, y] - aLow) * (255 / (aHigh - aLow)));
             }
+            
+            return tempImage;
+        }
+        
+        /// <summary>
+        /// Parallel
+        /// Create an image with the full range of intensity values used
+        /// </summary>
+        /// <param name="inputImage">single-channel (byte) image</param>
+        /// <returns>single-channel (byte) image</returns>
+        private byte[,] adjustContrastParallel(byte[,] inputImage)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            int[] histrogramValues = new int[256];
+            int nPixels = inputImage.GetLength(0) * inputImage.GetLength(1);
+            // 0.1 = 10% 
+            double percentageIgnoredValues = 0.1;
+            int amountIgnoredPixels = (int)(nPixels * percentageIgnoredValues);
+            
+            // get the x and y size of the input image
+            int inputXSize = tempImage.GetLength(0);
+            int inputYSize = tempImage.GetLength(1);
+            
+            // count all the histogram values
+            for (int y = 0; y < inputYSize; y++)
+            for (int x = 0; x < inputXSize; x++)
+            {
+                histrogramValues[inputImage[x, y]]++;
+            }
+            
+            // ignore the right amount of pixels and find the highest
+            int ignoredPixels = 0;
+            int i = 255;
+            while (ignoredPixels < amountIgnoredPixels)
+            {
+                ignoredPixels += histrogramValues[i];
+                i--;
+            }
+            byte aHigh = (byte)(i+1);
+            
+            // ignore the right amount of pixels and find the lowest
+            ignoredPixels = 0;
+            i = 0;
+            while (ignoredPixels < amountIgnoredPixels)
+            {
+                ignoredPixels += histrogramValues[i];
+                i++;
+            }
+            byte aLow = (byte)(i - 1);
+            
+            // calculate new values
+            ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
+            {
+                int inputX = index % inputXSize; // gets the x coord from the loop index
+                int inputY = index / inputXSize; // gets the y coord from the loop index
+                if (inputImage[inputX, inputY] > aHigh)
+                    tempImage[inputX, inputY] = 255;
+                else if (inputImage[inputX, inputY] < aLow)
+                    tempImage[inputX, inputY] = 0;
+                else
+                    tempImage[inputX, inputY] = (byte) ((inputImage[inputX, inputY] - aLow) * (255 / (aHigh - aLow)));
+            });
+            
+            // throw an error if any thread failed
+            if (!loopResult.IsCompleted)
+                throw new Exception($"invertImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
 
             return tempImage;
         }
@@ -296,6 +390,7 @@ namespace INFOIBV
          *          sigma               standard deviation of the Gaussian distribution // larger -> more spread out
          * output:                      Gaussian filter
          */
+        //TODO: write summary
         private float[,] createGaussianFilter(byte size, float sigma)
         {
             // check if the size is odd
@@ -374,6 +469,7 @@ namespace INFOIBV
          *          filter              linear kernel
          * output:                      single-channel (byte) image
          */
+        //TODO: write summary
         private byte[,] convolveImage(byte[,] inputImage, float[,] filter)
         {
             // create temporary grayscale image
@@ -411,6 +507,7 @@ namespace INFOIBV
             }
         }
 
+        //TODO: write summary
         private byte[,] convolveImageParallel(byte[,] inputImage, float[,] filter)
         {
             // create temporary grayscale image
@@ -460,8 +557,10 @@ namespace INFOIBV
          *          size                length/width of the median filter kernel
          * output:                      single-channel (byte) image
          */
+        //TODO:write summary
         private byte[,] medianFilter(byte[,] inputImage, byte size)
         {
+            //TODO: clean
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             int boundryPixels = size / 2;
@@ -494,8 +593,10 @@ namespace INFOIBV
             return tempImage;
         }
 
+        //TODO: write summary
         private byte[,] medianFilterParallel(byte[,] inputImage, byte size)
         {
+            //TODO: clean
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
@@ -531,7 +632,7 @@ namespace INFOIBV
             });
 
             if (!loopResult.IsCompleted)
-                throw new Exception($"consolveImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
+                throw new Exception($"medianFilterParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
 
             
 
@@ -559,8 +660,11 @@ namespace INFOIBV
             { 0, 0, 0 },
             { -1, -2, -1 }
         };
+        //TODO: write summary
         private byte[,] edgeMagnitude(byte[,] inputImage)
         {
+            //TODO: fix borders
+            //TODO: parallelize
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
@@ -609,32 +713,67 @@ namespace INFOIBV
         }
 
 
-        /*
-         * thresholdImage: threshold a grayscale image
-         * input:   inputImage          single-channel (byte) image
-         * output:                      single-channel (byte) image with on/off values
-         */
+        /// <summary>
+        /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
+        /// </summary>
+        /// <param name="inputImage"> single-channel (byte) image to threshold</param>
+        /// <param name="thresholdValue"> threshold value </param>
+        /// <returns>single-channel (byte) image</returns>
         private byte[,] thresholdImage(byte[,] inputImage, byte thresholdValue)
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
-            // TODO: add your functionality and checks, think about how to represent the binary values
-            for (int y = 0; (y < tempImage.GetLength(1)); y++)
+            // iterate over the image pixels and threshold them
+            for (int y = 0; y < tempImage.GetLength(1); y++)
+            for (int x = 0; x < tempImage.GetLength(0); x++)
             {
-                for (int x = 0; (x < tempImage.GetLength(0)); x++)
-                {
-                    if (inputImage[x, y] > thresholdValue)
-                        tempImage[x, y] = 255;
-                    else
-                        tempImage[x, y] = 0;
-                }
+                if (inputImage[x, y] > thresholdValue)
+                    tempImage[x, y] = 255;
+                else
+                    tempImage[x, y] = 0;
             }
+            
+            return tempImage;
+        }
+        
+        /// <summary>
+        /// Parallel.
+        /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
+        /// </summary>
+        /// <param name="inputImage"> single-channel (byte) image to threshold</param>
+        /// <param name="thresholdValue"> threshold value </param>
+        /// <returns>single-channel (byte) image</returns>
+        private byte[,] thresholdImageParallel(byte[,] inputImage, byte thresholdValue)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            // get the x size of the input image
+            int inputXSize = tempImage.GetLength(0);
+            
+            // iterate over the image pixels and threshold them
+            ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
+            {
+                int inputX = index % inputXSize; // gets the x coord from the loop index
+                int inputY = index / inputXSize; // gets the y coord from the loop index
+                if (inputImage[inputX, inputY] > thresholdValue)
+                    tempImage[inputY, inputY] = 255;
+                else
+                    tempImage[inputX, inputY] = 0;
+            });
+            
+            // throw and exception if any thread did not finish
+            if (!loopResult.IsCompleted)
+                throw new Exception($"thresholdImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
+            
             return tempImage;
         }
 
+        //TODO: write summary
         private byte[,] histrogramEqualization(byte[,] inputImage)
         {
+            //TODO: clean
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             int[] histrogramValues = new int[256];
