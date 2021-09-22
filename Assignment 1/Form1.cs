@@ -67,7 +67,6 @@ namespace INFOIBV
             
             stopwatch = Stopwatch.StartNew();
             //workingImage = convolveImageParallel(workingImage, createGaussianFilter(9, 10f));
-            //workingImage = thresholdImage(workingImage, 127);
 
             stopwatch.Stop();
             Debug.WriteLine($@"Total time in milliseconds : {stopwatch.ElapsedMilliseconds}");
@@ -710,6 +709,55 @@ namespace INFOIBV
             return tempImage;
         }
 
+        private byte[,] histrogramEqualization(byte[,] inputImage)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            int[] histrogramValues = new int[256];
+            int totalPixels = inputImage.GetLength(0) * inputImage.GetLength(1);
+
+            //Count all the histrogram values
+            for (int y = 0; (y < (inputImage.GetLength(1))); y++)
+            {
+                for (int x = 0; (x < (inputImage.GetLength(0))); x++)
+                {
+                    histrogramValues[inputImage[x, y]]++;
+                }
+            }
+
+            //Calculate probability 
+            double[] probability = new double[256];
+            for (int i = 0; i <= 255; i++)
+            {
+                probability[i] = histrogramValues[i] / (double)totalPixels;
+            }
+
+            //Calculate cumulative propability
+            double[] cumulativeProbability = new double[256];
+            cumulativeProbability[0] = probability[0];
+            for (int i = 1; i <= 255; i++)
+            {
+                cumulativeProbability[i] = cumulativeProbability[i-1] + probability[i];
+            }
+
+            //Multiply by 255
+            byte[] newValues = new byte[256];
+            for (int i = 1; i <= 255; i++)
+            {
+                newValues[i] = (byte)(cumulativeProbability[i] * 255);
+            }
+
+            //add new values to new image
+            for (int y = 0; (y < tempImage.GetLength(1)); y++)
+            {
+                for (int x = 0; (x < tempImage.GetLength(0)); x++)
+                {
+                    tempImage[x, y] = newValues[inputImage[x, y]];
+                }
+            }
+
+            return tempImage;
+        }
         
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 2 GO HERE ==============
