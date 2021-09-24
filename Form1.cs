@@ -141,11 +141,8 @@ namespace INFOIBV
             // Alternatively you can create buttons to invoke certain functionality
             // ====================================================================
 
-            byte[,] workingImage = convertToGrayscale(Image);          // convert image to grayscale
-            workingImage = convolveImageParallel(workingImage, createGaussianFilter(11, 13.2f));
-            workingImage = edgeMagnitude(workingImage);
-            workingImage = thresholdImage(workingImage, 100);
-            //TODO: set histogram equalization to be the default action
+            byte[,] workingImage = convertToGrayscale(Image);           // convert image to grayscale
+            workingImage = histrogramEqualization(workingImage);        // apply histogram equalisation
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -210,12 +207,11 @@ namespace INFOIBV
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 1 GO HERE ==============
         // ====================================================================
 
-        /*
-         * invertImage: invert a single channel (grayscale) image
-         * input:   inputImage          single-channel (byte) image
-         * output:                      single-channel (byte) image
-         */
-        //TODO: write summary
+        /// <summary>
+        /// Invert a single channel (grayscale) image
+        /// </summary>
+        /// <param name="inputImage">single-channel (byte) image</param>
+        /// <returns>single-channel (byte) image</returns>
         private byte[,] invertImage(byte[,] inputImage)
         {
             // create temporary grayscale image
@@ -228,8 +224,13 @@ namespace INFOIBV
 
             return tempImage;
         }
-        
-        //TODO: write summary
+
+        /// <summary>
+        /// Parallel
+        /// Invert a single channel (grayscale) image
+        /// </summary>
+        /// <param name="inputImage">single-channel (byte) image</param>
+        /// <returns>single-channel (byte) image</returns>
         private byte[,] invertImageParallel(byte[,] inputImage)
         {
             // create temporary grayscale image
@@ -382,15 +383,12 @@ namespace INFOIBV
             return tempImage;
         }
 
-        //private const int filterRoundingDelta = 1000;
-
-        /*
-         * createGaussianFilter: create a Gaussian filter of specific square size and with a specified sigma
-         * input:   size                length and width of the Gaussian filter (only odd sizes)
-         *          sigma               standard deviation of the Gaussian distribution // larger -> more spread out
-         * output:                      Gaussian filter
-         */
-        //TODO: write summary
+        /// <summary>
+        /// Create a Gaussian filter of specific square size and with a specified sigma
+        /// </summary>
+        /// <param name="size">Length and width of the Gaussian filter (only odd sizes)</param>
+        /// <param name="sigma">Standard deviation of the Gaussian distribution (larger -> more spread out)</param>
+        /// <returns>Gaussian filter kernel</returns>
         private float[,] createGaussianFilter(byte size, float sigma)
         {
             // check if the size is odd
@@ -429,8 +427,7 @@ namespace INFOIBV
 
             return filter;
         }
-        
-        
+
         /// <summary>
         /// get the x value of the image for the kernel application, mirroring the image if the edge is exceeded
         /// </summary>
@@ -439,14 +436,14 @@ namespace INFOIBV
         /// <param name="filterSizeDelta">The offset from the kernels center. Floor(kernelSize / 2)</param>
         /// <param name="inputImageXLength">The amount of pixels in the input image's x direction</param>
         /// <returns>The x coordinate which should be used in the reference image</returns>
-        private int GetRefImageX(int x, int kx, int filterSizeDelta, int inputImageXLength)
+        private int GetRefImageXMirrored(int x, int kx, int filterSizeDelta, int inputImageXLength)
         {
             int n = x + (kx - filterSizeDelta); // get the actual input image pixel
             if (n < 0) return Math.Abs(n); // off the left side of the image
             if (n >= inputImageXLength) return inputImageXLength - kx; // off the right side of the image
             return n; // in the image
         }
-            
+
         /// <summary>
         /// get the y value of the image for the kernel application, mirroring the image if the edge is exceeded
         /// </summary>
@@ -455,7 +452,7 @@ namespace INFOIBV
         /// <param name="filterSizeDelta">The offset from the kernels center. Floor(kernelSize / 2)</param>
         /// <param name="inputImageYLength">The amount of pixels in the input image's y direction</param>
         /// <returns>The y coordinate which should be used in the reference image</returns>
-        private int GetRefImageY(int y, int ky, int filterSizeDelta, int inputImageYLength)
+        private int GetRefImageYMirrored(int y, int ky, int filterSizeDelta, int inputImageYLength)
         {
             int n = y + (ky - filterSizeDelta); // get the actual input image pixel
             if (n < 0) return Math.Abs(n); // off the top of the image
@@ -463,13 +460,44 @@ namespace INFOIBV
             return n; // in the image
         }
 
-        /*
-         * convolveImage: apply linear filtering of an input image
-         * input:   inputImage          single-channel (byte) image
-         *          filter              linear kernel
-         * output:                      single-channel (byte) image
-         */
-        //TODO: write summary
+        /// <summary>
+        /// get the x value of the image for the kernel application, stretching the image if the edge is exceeded
+        /// </summary>
+        /// <param name="x">The x value of the input image</param>
+        /// <param name="kx">The x value of the kernel</param>
+        /// <param name="filterSizeDelta">The offset from the kernels center. Floor(kernelSize / 2)</param>
+        /// <param name="inputImageXLength">The amount of pixels in the input image's x direction</param>
+        /// <returns>The x coordinate which should be used in the reference image</returns>
+        private int GetRefImageXStretched(int x, int kx, int filterSizeDelta, int inputImageXLength)
+        {
+            int n = x + (kx - filterSizeDelta); // get the actual input image pixel
+            if (n < 0) return 0; // off the left side of the image
+            if (n >= inputImageXLength) return inputImageXLength - 1; // off the right side of the image
+            return n; // in the image
+        }
+
+        /// <summary>
+        /// get the y value of the image for the kernel application, stretching the image if the edge is exceeded
+        /// </summary>
+        /// <param name="x">The y value of the input image</param>
+        /// <param name="kx">The y value of the kernel</param>
+        /// <param name="filterSizeDelta">The offset from the kernels center. Floor(kernelSize / 2)</param>
+        /// <param name="inputImageYLength">The amount of pixels in the input image's y direction</param>
+        /// <returns>The y coordinate which should be used in the reference image</returns>
+        private int GetRefImageYStretched(int y, int ky, int filterSizeDelta, int inputImageYLength)
+        {
+            int n = y + (ky - filterSizeDelta); // get the actual input image pixel
+            if (n < 0) return 0; // off the top of the image
+            if (n >= inputImageYLength) return inputImageYLength - 1; // off the bottom of the image
+            return n; // in the image
+        }
+
+        /// <summary>
+        /// Apply linear filtering of an input image
+        /// </summary>
+        /// <param name="inputImage">Single-channel (byte) image</param>
+        /// <param name="filter">Linear kernel</param>
+        /// <returns>Single-channel (byte) image</returns>
         private byte[,] convolveImage(byte[,] inputImage, float[,] filter)
         {
             // create temporary grayscale image
@@ -500,14 +528,20 @@ namespace INFOIBV
                 for (int ky = 0; ky < filterSize; ky++)
                 {
                     newPixel += (byte) (filter[kx, ky] * 
-                                        inputImage[GetRefImageX(x, kx, filterSizeDelta, inputImage.GetLength(0))
-                                            , GetRefImageY(y, ky, filterSizeDelta, inputImage.GetLength(1))]);
+                                        inputImage[GetRefImageXMirrored(x, kx, filterSizeDelta, inputImage.GetLength(0))
+                                            , GetRefImageYMirrored(y, ky, filterSizeDelta, inputImage.GetLength(1))]);
                 }
                 return newPixel;
             }
         }
 
-        //TODO: write summary
+        /// <summary>
+        /// Parallel
+        /// Apply linear filtering of an input image
+        /// </summary>
+        /// <param name="inputImage">Single-channel (byte) image</param>
+        /// <param name="filter">Linear kernel</param>
+        /// <returns>Single-channel (byte) image</returns>
         private byte[,] convolveImageParallel(byte[,] inputImage, float[,] filter)
         {
             // create temporary grayscale image
@@ -544,20 +578,19 @@ namespace INFOIBV
                 for (int ky = 0; ky < filterSize; ky++)
                 {
                     newPixel += (byte) (filter[kx, ky] * 
-                                        inputImage[GetRefImageX(x, kx, filterSizeDelta, inputImage.GetLength(0))
-                                            , GetRefImageY(y, ky, filterSizeDelta, inputImage.GetLength(1))]);
+                                        inputImage[GetRefImageXMirrored(x, kx, filterSizeDelta, inputImage.GetLength(0))
+                                            , GetRefImageYMirrored(y, ky, filterSizeDelta, inputImage.GetLength(1))]);
                 }
                 return newPixel;
             }
         }
 
-        /*
-         * medianFilter: apply median filtering on an input image with a kernel of specified size
-         * input:   inputImage          single-channel (byte) image
-         *          size                length/width of the median filter kernel
-         * output:                      single-channel (byte) image
-         */
-        //TODO:write summary
+        /// <summary>
+        /// Apply median filtering on an input image with a kernel of specified size
+        /// </summary>
+        /// <param name="inputImage">Single-channel (byte) image</param>
+        /// <param name="size">Length/width of the median filter kernel</param>
+        /// <returns>Single-channel (byte) image</returns>
         private byte[,] medianFilter(byte[,] inputImage, byte size)
         {
             //TODO: clean
@@ -576,8 +609,8 @@ namespace INFOIBV
                         for (int xK = 0; xK < size; xK++)
                         {
 
-                            kernelValues.Add(inputImage[GetRefImageX(x, xK, boundryPixels, inputImage.GetLength(0)),
-                                                        GetRefImageY(y, yK, boundryPixels, inputImage.GetLength(1))]);
+                            kernelValues.Add(inputImage[GetRefImageXMirrored(x, xK, boundryPixels, inputImage.GetLength(0)),
+                                                        GetRefImageYMirrored(y, yK, boundryPixels, inputImage.GetLength(1))]);
                         }
                     }
                     //sort list
@@ -593,60 +626,50 @@ namespace INFOIBV
             return tempImage;
         }
 
-        //TODO: write summary
+        /// <summary>
+        /// Parallel
+        /// Apply median filtering on an input image with a kernel of specified size
+        /// </summary>
+        /// <param name="inputImage">Single-channel (byte) image</param>
+        /// <param name="size"></param>
+        /// <returns></returns>
         private byte[,] medianFilterParallel(byte[,] inputImage, byte size)
         {
-            //TODO: clean
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-
-
             // calculate the size delta
             int filterSizeDelta = size / 2;
-            // get the x size of the input image
             int inputXSize = inputImage.GetLength(0);
-
             // loop over the input image in parallel
             ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
             {
                 int inputX = index % inputXSize; // gets the x coord from the loop index
                 int inputY = index / inputXSize; // gets the y coord from the loop index
-
                 //Add all kernel Values to a list
                 List<byte> kernelValues = new List<byte>();
                 for (int yK = 0; yK < size; yK++)
                 {
                     for (int xK = 0; xK < size; xK++)
                     {
-                        
-                        kernelValues.Add(inputImage[GetRefImageX(inputX, xK, filterSizeDelta, inputImage.GetLength(0)), 
-                                                    GetRefImageY(inputY, yK, filterSizeDelta, inputImage.GetLength(1))]);
+                        kernelValues.Add(inputImage[GetRefImageXMirrored(inputX, xK, filterSizeDelta, inputImage.GetLength(0)), 
+                                                    GetRefImageYMirrored(inputY, yK, filterSizeDelta, inputImage.GetLength(1))]);
                     }
                 }
-                //sort list
+                //sort list and extract the median value
                 kernelValues.Sort();
-
                 int medianIndex = (int)Math.Ceiling(((double)(size * size) / 2));
-
                 tempImage[inputX, inputY] = kernelValues[medianIndex];
             });
 
             if (!loopResult.IsCompleted)
                 throw new Exception($"medianFilterParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
 
-            
-
             return tempImage;
         }
 
-        /*
-         * edgeMagnitude: calculate the image derivative of an input image and a provided edge kernel
-         * input:   inputImage          single-channel (byte) image
-         *          horizontalKernel    horizontal edge kernel
-         *          verticalKernel      vertical edge kernel
-         * output:                      single-channel (byte) image
-         */
-
+        /// <summary>
+        /// Sobel filter in the horizontal direction
+        /// </summary>
         double[,] sobelX = new double[,]
         {
             { -1, 0, 1 },
@@ -654,64 +677,118 @@ namespace INFOIBV
             { -1, 0, 1 }
         };
 
+        /// <summary>
+        /// Sobel filter in the vertical direction
+        /// </summary>
         double[,] sobelY = new double[,]
         {
             { 1, 2, 1 },
             { 0, 0, 0 },
             { -1, -2, -1 }
         };
-        //TODO: write summary
+
+        /// <summary>
+        /// Calculate the image derivative of an input image and a provided edge kernel
+        /// </summary>
+        /// <param name="inputImage">Single-channel (byte) image</param>
+        /// <returns></returns>
         private byte[,] edgeMagnitude(byte[,] inputImage)
         {
-            //TODO: fix borders
-            //TODO: parallelize
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
-            for (int y = 1; (y < tempImage.GetLength(1) - 1); y++)
+            // loop over the image and calculate the image derivative
+            for (int y = 0; (y < tempImage.GetLength(1)); y++)
+            for (int x = 0; (x < tempImage.GetLength(0)); x++)
             {
-                for (int x = 1; (x < tempImage.GetLength(0) - 1); x++)
-                {
-                    double hor = calcValue(sobelY, calcKernel(x, y));
-                    double ver = calcValue(sobelX, calcKernel(x, y));
-                    hor = hor * hor;
-                    ver = ver * ver;
-                    double answer = Math.Sqrt(hor + ver);
-                    if (answer > 255)
-                        answer = 255;
-                    tempImage[x, y] = (byte)answer;
-
-                }
+                double hor = calcValue(sobelY, calcKernel(x, y));
+                double ver = calcValue(sobelX, calcKernel(x, y));
+                double answer = Math.Sqrt((hor * hor) + (ver * ver));
+                if (answer > 255)
+                    answer = 255;
+                tempImage[x, y] = (byte)answer;
             }
             
             return tempImage;
 
+            // Apply the sobel kernel to the given image kernel
             double calcValue(double[,] sobelKernel, byte[,] kernel)
             {
                 double total = 0;
                 for (int y = 0; y < 3; y++)
-                {
-                    for (int x = 0; x < 3; x++)
-                    {
-                        total += sobelKernel[x, y] * (double)kernel[x, y];
-                    }
-                }
+                for (int x = 0; x < 3; x++)
+                    total += sobelKernel[x, y] * (double)kernel[x, y];
 
                 return total;
             }
 
+            // Get the image kernel corresponding to the given pixel
             byte[,] calcKernel(int x, int y)
             {
                 byte[,] kernel = new byte[,]
                     {
-                        { inputImage[x-1,y-1], inputImage[x-1,y], inputImage[x-1,y+1]},
-                        { inputImage[x,y-1], inputImage[x,y], inputImage[x,y+1]},
-                        { inputImage[x+1,y-1], inputImage[x+1,y], inputImage[x+1,y+1] }
+                        { inputImage[GetRefImageXStretched(x, 0, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 0, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 0, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 1, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 0, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 2, 1, inputImage.GetLength(1))]},
+                        { inputImage[GetRefImageXStretched(x, 1, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 0, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 1, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 1, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 1, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 2, 1, inputImage.GetLength(1))]},
+                        { inputImage[GetRefImageXStretched(x, 2, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 0, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 2, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 1, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 2, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 2, 1, inputImage.GetLength(1))] }
                     };
                 return kernel;
             }
         }
 
+        /// <summary>
+        /// Parallel
+        /// Calculate the image derivative of an input image and a provided edge kernel
+        /// </summary>
+        /// <param name="inputImage">Single-channel (byte) image</param>
+        /// <returns></returns>
+        private byte[,] edgeMagnitudeParallel(byte[,] inputImage)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            int inputXSize = inputImage.GetLength(0);
+
+            ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
+            {
+                int inputX = index % inputXSize; // gets the x coord from the loop index
+                int inputY = index / inputXSize; // gets the y coord from the loop index
+
+                double hor = calcValue(sobelY, calcKernel(inputX, inputY));
+                double ver = calcValue(sobelX, calcKernel(inputX, inputY));
+                double answer = Math.Sqrt((hor * hor) + (ver * ver));
+                if (answer > 255)
+                    answer = 255;
+                tempImage[inputX, inputY] = (byte)answer;
+            });
+
+            if (!loopResult.IsCompleted)
+                throw new Exception($"medianFilterParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
+
+            return tempImage;
+
+            //Apply the sobel kernel to the given image kernel
+            double calcValue(double[,] sobelKernel, byte[,] kernel)
+            {
+                double total = 0;
+                for (int y = 0; y < 3; y++)
+                for (int x = 0; x < 3; x++)
+                    total += sobelKernel[x, y] * (double)kernel[x, y];
+                    
+                return total;
+            }
+
+            // Get the image kernel corresponding to the given pixel
+            byte[,] calcKernel(int x, int y)
+            {
+                byte[,] kernel = new byte[,]
+                    {
+                        { inputImage[GetRefImageXStretched(x, 0, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 0, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 0, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 1, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 0, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 2, 1, inputImage.GetLength(1))]},
+                        { inputImage[GetRefImageXStretched(x, 1, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 0, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 1, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 1, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 1, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 2, 1, inputImage.GetLength(1))]},
+                        { inputImage[GetRefImageXStretched(x, 2, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 0, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 2, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 1, 1, inputImage.GetLength(1))], inputImage[GetRefImageXStretched(x, 2, 1, inputImage.GetLength(0)),GetRefImageYStretched(y, 2, 1, inputImage.GetLength(1))] }
+                    };
+                return kernel;
+            }
+        }
 
         /// <summary>
         /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
@@ -770,54 +847,43 @@ namespace INFOIBV
             return tempImage;
         }
 
-        //TODO: write summary
+        /// <summary>
+        /// Equalize the histogram of the given image
+        /// </summary>
+        /// <param name="inputImage">single-channel (byte) image</param>
+        /// <returns>single-channel (byte) image</returns>
         private byte[,] histrogramEqualization(byte[,] inputImage)
         {
-            //TODO: clean
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             int[] histrogramValues = new int[256];
             int totalPixels = inputImage.GetLength(0) * inputImage.GetLength(1);
 
             //Count all the histrogram values
-            for (int y = 0; (y < (inputImage.GetLength(1))); y++)
-            {
-                for (int x = 0; (x < (inputImage.GetLength(0))); x++)
-                {
-                    histrogramValues[inputImage[x, y]]++;
-                }
-            }
+            for (int y = 0; y < inputImage.GetLength(1); y++)
+            for (int x = 0; x < inputImage.GetLength(0); x++)
+                histrogramValues[inputImage[x, y]]++;
 
             //Calculate probability 
             double[] probability = new double[256];
             for (int i = 0; i <= 255; i++)
-            {
                 probability[i] = histrogramValues[i] / (double)totalPixels;
-            }
 
             //Calculate cumulative propability
             double[] cumulativeProbability = new double[256];
             cumulativeProbability[0] = probability[0];
             for (int i = 1; i <= 255; i++)
-            {
                 cumulativeProbability[i] = cumulativeProbability[i-1] + probability[i];
-            }
 
             //Multiply by 255
             byte[] newValues = new byte[256];
             for (int i = 1; i <= 255; i++)
-            {
                 newValues[i] = (byte)(cumulativeProbability[i] * 255);
-            }
 
             //add new values to new image
-            for (int y = 0; (y < tempImage.GetLength(1)); y++)
-            {
-                for (int x = 0; (x < tempImage.GetLength(0)); x++)
-                {
-                    tempImage[x, y] = newValues[inputImage[x, y]];
-                }
-            }
+            for (int y = 0; y < tempImage.GetLength(1); y++)
+            for (int x = 0; x < tempImage.GetLength(0); x++)
+                tempImage[x, y] = newValues[inputImage[x, y]];
 
             return tempImage;
         }
