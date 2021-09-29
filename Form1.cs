@@ -1043,6 +1043,28 @@ namespace INFOIBV
         {
             return lhs.OR(rhs);
         }
+        /// <summary>
+        /// opens the image by doing an erosion followed by a dilation
+        /// </summary>
+        /// <param name="inputImage">single-channel (byte) image</param>
+        /// <param name="structuringElement">structuring element</param>
+        /// <returns>single-channel (byte) image</returns>
+        private byte[,] openImage(byte[,] inputImage, byte[,] structuringElement)
+        {
+            //erosion followed by dilation
+            return null;// dilateImage(erodeImage(inputImage, structuringElement), structuringElement);
+        }
+        /// <summary>
+        /// closes the image by doing a dilation followed by an erosion
+        /// </summary>
+        /// <param name="inputImage">single-channel (byte) image</param>
+        /// <param name="structuringElement">structuring element</param>
+        /// <returns>single-channel (byte) image</returns>
+        private byte[,] closeImage(byte[,] inputImage, byte[,] structuringElement)
+        {
+            //dilation followed by erosion
+            return null;// erodeImage(dilateImage(inputImage, structuringElement), structuringElement);
+        }
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
