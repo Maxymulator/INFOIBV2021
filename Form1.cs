@@ -143,7 +143,7 @@ namespace INFOIBV
             // ====================================================================
 
             byte[,] workingImage = convertToGrayscale(Image);           // convert image to grayscale
-            //workingImage = histrogramEqualization(workingImage);        // apply histogram equalisation
+            workingImage = histrogramEqualization(workingImage);        // apply histogram equalisation
 
             countValues(workingImage);
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -946,6 +946,7 @@ namespace INFOIBV
         {
             //Count all the histrogram values
             chart1.Series.Clear();
+            chart1.Titles.Clear();
             int[] histrogramValues = new int[256];
 
             for (int y = 0; y < inputImage.GetLength(1); y++)
