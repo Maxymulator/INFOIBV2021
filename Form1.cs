@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Forms.DataVisualization.Charting;
 
 namespace INFOIBV
 {
@@ -142,8 +143,9 @@ namespace INFOIBV
             // ====================================================================
 
             byte[,] workingImage = convertToGrayscale(Image);           // convert image to grayscale
-            workingImage = histrogramEqualization(workingImage);        // apply histogram equalisation
-            
+            //workingImage = histrogramEqualization(workingImage);        // apply histogram equalisation
+
+            countValues(workingImage);
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
 
@@ -940,6 +942,29 @@ namespace INFOIBV
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 2 GO HERE ==============
         // ====================================================================
 
+        void countValues(byte[,] inputImage)
+        {
+            //Count all the histrogram values
+            chart1.Series.Clear();
+            int[] histrogramValues = new int[256];
+
+            for (int y = 0; y < inputImage.GetLength(1); y++)
+            for (int x = 0; x < inputImage.GetLength(0); x++)
+                histrogramValues[inputImage[x, y]]++;
+            
+            Series series = chart1.Series.Add("Grey values");
+            for (int i = 0; i < histrogramValues.Length; i++)
+            {
+                series.Points.AddXY(i, histrogramValues[i]);
+            }
+            int nDistinctValues = 0;
+            for (int i = 0; i < histrogramValues.Length; i++)
+            {
+                if (histrogramValues[i] > 0)
+                    nDistinctValues++;
+            }
+            chart1.Titles.Add("Number of distinct Values: " + nDistinctValues);
+        }
 
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
