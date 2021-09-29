@@ -150,37 +150,10 @@ namespace INFOIBV
             // ====================================================================
 
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
-            workingImage = new byte[,]
-            {
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
-            };
-            workingImage = new byte[,]
-            {
-                {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                {0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0},
-                {0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0},
-                {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
-                {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
-                {0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0},
-                {0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0},
-                {0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0},
-                {0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0},
-                {0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0},
-                {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-            };
-            workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
+            workingImage = thresholdImage(workingImage, 10);
+            workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 13));
+            
+            //workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
 
             //countValues(workingImage);
@@ -1044,7 +1017,7 @@ namespace INFOIBV
         private enum StructuringElementShape
         {
             Square,
-            Cross
+            Plus
         }
 
         /// <summary>
@@ -1055,8 +1028,8 @@ namespace INFOIBV
         /// <returns>single-channel (byte) image</returns>
         private byte[,] createStructuringElement(StructuringElementShape shape, int size)
         {
-            if (size % 2 == 0)
-                throw new ArgumentException("createStructuringElement got a even size");
+            if (size % 2 == 0 || size <= 1)
+                throw new ArgumentException("createStructuringElement got an invalid size");
 
             byte[,] H = new byte[size, size];
             switch (shape)
@@ -1064,15 +1037,16 @@ namespace INFOIBV
                 case StructuringElementShape.Square:
                     CreateSquareSE();
                     break;
-                case StructuringElementShape.Cross:
-                    CreateCrossSE();
+                case StructuringElementShape.Plus:
+                    CreatePlusSE();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(shape), shape, null);
             }
-            
+
             return H;
 
+            // Create the square shaped structuring element
             void CreateSquareSE()
             {
                 for (int y = 0; y < size; y++)
@@ -1082,13 +1056,41 @@ namespace INFOIBV
                 }
             }
 
-            void CreateCrossSE()
+            // Create the Plus shaped structuring element
+            void CreatePlusSE()
             {
-                int crossIndex = size / 2;
+                // Get the index of the center of the structuring element
+                int plusIndex = size / 2;
+                
+                // Create a 3x3 plus shaped structuring element
+                byte[,] plus3x3 = new byte[,]
+                {
+                    {0,   255, 0  },
+                    {255, 255, 255},
+                    {0,   255, 0  }
+                };
+
+                // If the size is 3x3, the further calculations are not needed and thus skipped for efficiency
+                if (size == 3)
+                {
+                    H = plus3x3;
+                    return;
+                }
+                
+                // Create the empty structuring element with a 3x3 plus in the center
                 for (int y = 0; y < size; y++)
                 for (int x = 0; x < size; x++)
                 {
-                    H[x, y] = (x == crossIndex || y == crossIndex) ? (byte) 255 : (byte) 0;
+                    H[x, y] = x == plusIndex && y - plusIndex >= -1 && y - plusIndex <= 1 ||
+                              y == plusIndex && x - plusIndex >= -1 && x - plusIndex <= 1
+                        ? (byte) 255 // current coordinate is part of the center 3x3 plus
+                        : (byte) 0;  // current coordinate is not part of the center 3x3 plus
+                }
+                
+                // Iteratively dilate the empty structuring element to get the required size structuring element
+                for (int i = size; i > 3; i -= 2)
+                {
+                    H = dilateImage(H, plus3x3);
                 }
             }
         }
@@ -1138,8 +1140,8 @@ namespace INFOIBV
                     else if (refY < 0 || refY >= ySize)
                         valList.Add(0);
                     else
-                        // Add the value to the valList
-                        valList.Add(input[refX, refY]);
+                        // Add the value to the valList with respect to the structuring element
+                        valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte) 0);
                 }
                 
                 // Return the lowest value of the neighborhood to erode the image
@@ -1192,8 +1194,8 @@ namespace INFOIBV
                     else if (refY < 0 || refY >= ySize)
                         valList.Add(0);
                     else
-                        // Add the value to the valList
-                        valList.Add(input[refX, refY]);
+                        // Add the value to the valList with respect to the structuring element
+                        valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte) 0);
                 }
                 
                 // Return the highest value of the neighborhood to dilate the image
@@ -1212,6 +1214,7 @@ namespace INFOIBV
             //erosion followed by dilation
             return dilateImage(erodeImage(inputImage, structuringElement), structuringElement);
         }
+        
         /// <summary>
         /// closes the image by doing a dilation followed by an erosion
         /// </summary>
