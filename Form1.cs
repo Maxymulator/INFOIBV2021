@@ -24,17 +24,17 @@ namespace INFOIBV
         private void loadImageButton_Click(object sender, EventArgs e)
         {
            if (openImageDialog.ShowDialog() == DialogResult.OK)             // open file dialog
-            {
-                string file = openImageDialog.FileName;                     // get the file name
-                imageFileName.Text = file;                                  // show file name
-                if (InputImage != null) InputImage.Dispose();               // reset image
-                InputImage = new Bitmap(file);                              // create new Bitmap from file
-                if (InputImage.Size.Height <= 0 || InputImage.Size.Width <= 0 ||
-                    InputImage.Size.Height > 512 || InputImage.Size.Width > 512) // dimension check (may be removed or altered)
-                    MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
-                else
-                    pictureBox1.Image = InputImage;                 // display input image
-            }
+           {
+               string file = openImageDialog.FileName;                     // get the file name
+               imageFileName.Text = file;                                  // show file name
+               if (InputImage != null) InputImage.Dispose();               // reset image
+               InputImage = new Bitmap(file);                              // create new Bitmap from file
+               if (InputImage.Size.Height <= 0 || InputImage.Size.Width <= 0 ||
+                   InputImage.Size.Height > 512 || InputImage.Size.Width > 512) // dimension check (may be removed or altered)
+                   MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
+               else
+                   pictureBox1.Image = InputImage;                 // display input image
+           }
         }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace INFOIBV
             workingImage = edgeMagnitude(workingImage);
 
             // apply a threshold
-            workingImage = thresholdImage(workingImage, 80);
+            workingImage = thresholdImageToBinaryParallel(workingImage, 80).GetImage();
 
             // copy array to output Bitmap
             for (int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
@@ -108,7 +108,7 @@ namespace INFOIBV
             workingImage = edgeMagnitude(workingImage);
 
             // apply a threshold
-            workingImage = thresholdImage(workingImage, 80);
+            workingImage = thresholdImageToBinaryParallel(workingImage, 80).GetImage();
 
             // copy array to output Bitmap
             for (int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
@@ -143,7 +143,7 @@ namespace INFOIBV
 
             byte[,] workingImage = convertToGrayscale(Image);           // convert image to grayscale
             workingImage = histrogramEqualization(workingImage);        // apply histogram equalisation
-
+            
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
 
@@ -845,6 +845,63 @@ namespace INFOIBV
                 throw new Exception($"thresholdImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
             
             return tempImage;
+        }
+        
+        /// <summary>
+        /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
+        /// </summary>
+        /// <param name="inputImage"> single-channel (byte) image to threshold</param>
+        /// <param name="thresholdValue"> threshold value </param>
+        /// <returns>single-channel (byte) image</returns>
+        private BinaryImage thresholdImageToBinary(byte[,] inputImage, byte thresholdValue)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            // iterate over the image pixels and threshold them
+            for (int y = 0; y < tempImage.GetLength(1); y++)
+            for (int x = 0; x < tempImage.GetLength(0); x++)
+            {
+                if (inputImage[x, y] > thresholdValue)
+                    tempImage[x, y] = 255;
+                else
+                    tempImage[x, y] = 0;
+            }
+            
+            return new BinaryImage(tempImage);
+        }
+        
+        /// <summary>
+        /// Parallel.
+        /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
+        /// </summary>
+        /// <param name="inputImage"> single-channel (byte) image to threshold</param>
+        /// <param name="thresholdValue"> threshold value </param>
+        /// <returns>single-channel (byte) image</returns>
+        private BinaryImage thresholdImageToBinaryParallel(byte[,] inputImage, byte thresholdValue)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            // get the x size of the input image
+            int inputXSize = tempImage.GetLength(0);
+            
+            // iterate over the image pixels and threshold them
+            ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
+            {
+                int inputX = index % inputXSize; // gets the x coord from the loop index
+                int inputY = index / inputXSize; // gets the y coord from the loop index
+                if (inputImage[inputX, inputY] > thresholdValue)
+                    tempImage[inputY, inputY] = 255;
+                else
+                    tempImage[inputX, inputY] = 0;
+            });
+            
+            // throw and exception if any thread did not finish
+            if (!loopResult.IsCompleted)
+                throw new Exception($"thresholdImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
+            
+            return new BinaryImage(tempImage);
         }
 
         /// <summary>
