@@ -24,18 +24,18 @@ namespace INFOIBV
          */
         private void loadImageButton_Click(object sender, EventArgs e)
         {
-           if (openImageDialog.ShowDialog() == DialogResult.OK)             // open file dialog
-           {
-               string file = openImageDialog.FileName;                     // get the file name
-               imageFileName.Text = file;                                  // show file name
-               if (InputImage != null) InputImage.Dispose();               // reset image
-               InputImage = new Bitmap(file);                              // create new Bitmap from file
-               if (InputImage.Size.Height <= 0 || InputImage.Size.Width <= 0 ||
-                   InputImage.Size.Height > 512 || InputImage.Size.Width > 512) // dimension check (may be removed or altered)
-                   MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
-               else
-                   pictureBox1.Image = InputImage;                 // display input image
-           }
+             if (openImageDialog.ShowDialog() == DialogResult.OK)             // open file dialog
+             {
+                 string file = openImageDialog.FileName;                     // get the file name
+                 imageFileName.Text = file;                                  // show file name
+                 if (InputImage != null) InputImage.Dispose();               // reset image
+                 InputImage = new Bitmap(file);                              // create new Bitmap from file
+                 if (InputImage.Size.Height <= 0 || InputImage.Size.Width <= 0 ||
+                     InputImage.Size.Height > 512 || InputImage.Size.Width > 512) // dimension check (may be removed or altered)
+                     MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
+                 else
+                     pictureBox1.Image = InputImage;                 // display input image
+             }
         }
 
         /// <summary>
@@ -156,7 +156,7 @@ namespace INFOIBV
                     Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
-            
+
             pictureBox2.Image = OutputImage;                         // display output image
         }
 
@@ -221,8 +221,8 @@ namespace INFOIBV
 
             // iterate over the pixels and invert them
             for (int y = 0; y < tempImage.GetLength(1); y++)
-            for (int x = 0; x < tempImage.GetLength(0); x++)
-                tempImage[x, y] = (byte)(255 - inputImage[x, y]);
+                    for (int x = 0; x < tempImage.GetLength(0); x++)
+                        tempImage[x, y] = (byte)(255 - inputImage[x, y]);
 
             return tempImage;
         }
@@ -248,7 +248,7 @@ namespace INFOIBV
                 int inputY = index / inputXSize; // gets the y coord from the loop index
                 tempImage[inputX, inputY] = (byte)(255 - inputImage[inputX, inputY]);
             });
-            
+
             // throw an error if any thread failed
             if (!loopResult.IsCompleted)
                 throw new Exception($"invertImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
@@ -271,17 +271,17 @@ namespace INFOIBV
             // 0.1 = 10% 
             double percentageIgnoredValues = 0.1;
             int amountIgnoredPixels = (int)(nPixels * percentageIgnoredValues);
-            
+
             // get the x and y size of the input image
             int inputXSize = tempImage.GetLength(0);
             int inputYSize = tempImage.GetLength(1);
-            
+
             // count all the histogram values
             for (int y = 0; y < inputYSize; y++)
-            for (int x = 0; x < inputXSize; x++)
-            {
-                histrogramValues[inputImage[x, y]]++;
-            }
+                    for (int x = 0; x < inputXSize; x++)
+                    {
+                        histrogramValues[inputImage[x, y]]++;
+                    }
 
             // ignore the right amount of pixels and find the highest
             int ignoredPixels = 0;
@@ -291,8 +291,8 @@ namespace INFOIBV
                 ignoredPixels += histrogramValues[i];
                 i--;
             }
-            byte aHigh = (byte)(i+1);
-            
+            byte aHigh = (byte)(i  +  1);
+
             // ignore the right amount of pixels and find the lowest
             ignoredPixels = 0;
             i = 0;
@@ -302,22 +302,22 @@ namespace INFOIBV
                 i++;
             }
             byte aLow = (byte)(i - 1);
-            
+
             // calculate new values
             for (int y = 0; y < inputYSize; y++)
-            for (int x = 0; x < inputXSize; x++)
-            {
-                if(inputImage[x, y] > aHigh)
-                    tempImage[x, y] = 255;
-                else if (inputImage[x, y] < aLow)
-                    tempImage[x, y] = 0;
-                else
-                    tempImage[x, y] = (byte)((inputImage[x, y] - aLow) * (255 / (aHigh - aLow)));
-            }
-            
+                    for (int x = 0; x < inputXSize; x++)
+                    {
+                        if  (inputImage[x, y] > aHigh)
+                            tempImage[x, y] = 255;
+                        else if (inputImage[x, y] < aLow)
+                            tempImage[x, y] = 0;
+                        else
+                            tempImage[x, y] = (byte)((inputImage[x, y] - aLow) * (255 / (aHigh - aLow)));
+                    }
+
             return tempImage;
         }
-        
+
         /// <summary>
         /// Parallel
         /// Create an image with the full range of intensity values used
@@ -333,18 +333,18 @@ namespace INFOIBV
             // 0.1 = 10% 
             double percentageIgnoredValues = 0.1;
             int amountIgnoredPixels = (int)(nPixels * percentageIgnoredValues);
-            
+
             // get the x and y size of the input image
             int inputXSize = tempImage.GetLength(0);
             int inputYSize = tempImage.GetLength(1);
-            
+
             // count all the histogram values
             for (int y = 0; y < inputYSize; y++)
-            for (int x = 0; x < inputXSize; x++)
-            {
-                histrogramValues[inputImage[x, y]]++;
-            }
-            
+                    for (int x = 0; x < inputXSize; x++)
+                    {
+                        histrogramValues[inputImage[x, y]]++;
+                    }
+
             // ignore the right amount of pixels and find the highest
             int ignoredPixels = 0;
             int i = 255;
@@ -353,8 +353,8 @@ namespace INFOIBV
                 ignoredPixels += histrogramValues[i];
                 i--;
             }
-            byte aHigh = (byte)(i+1);
-            
+            byte aHigh = (byte)(i  +  1);
+
             // ignore the right amount of pixels and find the lowest
             ignoredPixels = 0;
             i = 0;
@@ -364,7 +364,7 @@ namespace INFOIBV
                 i++;
             }
             byte aLow = (byte)(i - 1);
-            
+
             // calculate new values
             ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
             {
@@ -375,9 +375,9 @@ namespace INFOIBV
                 else if (inputImage[inputX, inputY] < aLow)
                     tempImage[inputX, inputY] = 0;
                 else
-                    tempImage[inputX, inputY] = (byte) ((inputImage[inputX, inputY] - aLow) * (255 / (aHigh - aLow)));
+                    tempImage[inputX, inputY] = (byte)((inputImage[inputX, inputY] - aLow) * (255 / (aHigh - aLow)));
             });
-            
+
             // throw an error if any thread failed
             if (!loopResult.IsCompleted)
                 throw new Exception($"invertImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
@@ -405,14 +405,14 @@ namespace INFOIBV
 
             // create the Gaussian filter
             for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                int kernelX = Math.Abs(x - sizeDelta);
-                int kernelY = Math.Abs(y - sizeDelta);
-                filter[x, y] = 1 / (2 * (float) Math.PI * (sigma * sigma)) *
-                               (float) Math.Pow(Math.E,
-                                   -((kernelX * kernelX + kernelY * kernelY) / (2 * (sigma * sigma))));
-            }
+                    for (int x = 0; x < size; x++)
+                    {
+                        int kernelX = Math.Abs(x - sizeDelta);
+                        int kernelY = Math.Abs(y - sizeDelta);
+                        filter[x, y] = 1 / (2 * (float)Math.PI * (sigma * sigma)) *
+                                       (float)Math.Pow(Math.E,
+                                           -((kernelX * kernelX + kernelY * kernelY) / (2 * (sigma * sigma))));
+                    }
 
             // calculate the normalizing multiplier of the kernel
             float kernelSum = 0.0f;
@@ -422,10 +422,10 @@ namespace INFOIBV
 
             // normalize the kernel
             for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                filter[x, y] *= kernelMult;
-            }
+                    for (int x = 0; x < size; x++)
+                    {
+                        filter[x, y] *= kernelMult;
+                    }
 
             return filter;
         }
@@ -512,11 +512,11 @@ namespace INFOIBV
 
             // loop over the input image
             for (int y = 0; y < inputImage.GetLength(1); y++)
-            for (int x = 0; x < inputImage.GetLength(0); x++)
-            {
-                tempImage[x, y] = ApplyKernel(x, y);
-            }
-            
+                    for (int x = 0; x < inputImage.GetLength(0); x++)
+                    {
+                        tempImage[x, y] = ApplyKernel(x, y);
+                    }
+
             return tempImage;
 
             // apply the kernel to the given pixel
@@ -524,15 +524,15 @@ namespace INFOIBV
             {
                 // create a new pixel
                 byte newPixel = 0;
-                
+
                 // loop over the filter kernel, adding the values to newPixel during execution
-                for(int kx = 0; kx < filterSize; kx++)
-                for (int ky = 0; ky < filterSize; ky++)
-                {
-                    newPixel += (byte) (filter[kx, ky] * 
-                                        inputImage[GetRefImageXMirrored(x, kx, filterSizeDelta, inputImage.GetLength(0))
-                                            , GetRefImageYMirrored(y, ky, filterSizeDelta, inputImage.GetLength(1))]);
-                }
+                for  (int kx = 0; kx < filterSize; kx++)
+                        for (int ky = 0; ky < filterSize; ky++)
+                        {
+                            newPixel += (byte)(filter[kx, ky] *
+                                            inputImage[GetRefImageXMirrored(x, kx, filterSizeDelta, inputImage.GetLength(0))
+                                                    , GetRefImageYMirrored(y, ky, filterSizeDelta, inputImage.GetLength(1))]);
+                        }
                 return newPixel;
             }
         }
@@ -566,7 +566,7 @@ namespace INFOIBV
 
             if (!loopResult.IsCompleted)
                 throw new Exception($"consolveImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
-            
+
             return tempImage;
 
             // apply the kernel to the given pixel
@@ -574,15 +574,15 @@ namespace INFOIBV
             {
                 // create a new pixel
                 byte newPixel = 0;
-                
+
                 // loop over the filter kernel, adding the values to newPixel during execution
-                for(int kx = 0; kx < filterSize; kx++)
-                for (int ky = 0; ky < filterSize; ky++)
-                {
-                    newPixel += (byte) (filter[kx, ky] * 
-                                        inputImage[GetRefImageXMirrored(x, kx, filterSizeDelta, inputImage.GetLength(0))
-                                            , GetRefImageYMirrored(y, ky, filterSizeDelta, inputImage.GetLength(1))]);
-                }
+                for  (int kx = 0; kx < filterSize; kx++)
+                        for (int ky = 0; ky < filterSize; ky++)
+                        {
+                            newPixel += (byte)(filter[kx, ky] *
+                                            inputImage[GetRefImageXMirrored(x, kx, filterSizeDelta, inputImage.GetLength(0))
+                                                    , GetRefImageYMirrored(y, ky, filterSizeDelta, inputImage.GetLength(1))]);
+                        }
                 return newPixel;
             }
         }
@@ -600,21 +600,21 @@ namespace INFOIBV
             int boundryPixels = size / 2;
 
             for (int y = boundryPixels; y < (inputImage.GetLength(1) - boundryPixels); y++)
-            for (int x = boundryPixels; x < (inputImage.GetLength(0) - boundryPixels); x++)
-            {
-                //Add all kernel Values to a list
-                List<byte> kernelValues = new List<byte>();
-                for (int yK = 0; yK < size; yK++)
-                for (int xK = 0; xK < size; xK++)
-                    kernelValues.Add(inputImage[GetRefImageXMirrored(x, xK, boundryPixels, inputImage.GetLength(0)),
-                        GetRefImageYMirrored(y, yK, boundryPixels, inputImage.GetLength(1))]);
-                
-                //sort list
-                kernelValues.Sort();
-                int medianIndex = (int)Math.Ceiling(((double)(size * size) / 2));
-                tempImage[x, y] = kernelValues[medianIndex];
-            }
-            
+                    for (int x = boundryPixels; x < (inputImage.GetLength(0) - boundryPixels); x++)
+                    {
+                        //Add all kernel Values to a list
+                        List<byte> kernelValues = new List<byte>();
+                        for (int yK = 0; yK < size; yK++)
+                                for (int xK = 0; xK < size; xK++)
+                                    kernelValues.Add(inputImage[GetRefImageXMirrored(x, xK, boundryPixels, inputImage.GetLength(0)),
+                                        GetRefImageYMirrored(y, yK, boundryPixels, inputImage.GetLength(1))]);
+
+                    //sort list
+                        kernelValues.Sort();
+                        int medianIndex = (int)Math.Ceiling(((double)(size * size) / 2));
+                        tempImage[x, y] = kernelValues[medianIndex];
+                    }
+
             return tempImage;
         }
 
@@ -643,7 +643,7 @@ namespace INFOIBV
                 {
                     for (int xK = 0; xK < size; xK++)
                     {
-                        kernelValues.Add(inputImage[GetRefImageXMirrored(inputX, xK, filterSizeDelta, inputImage.GetLength(0)), 
+                        kernelValues.Add(inputImage[GetRefImageXMirrored(inputX, xK, filterSizeDelta, inputImage.GetLength(0)),
                                                     GetRefImageYMirrored(inputY, yK, filterSizeDelta, inputImage.GetLength(1))]);
                     }
                 }
@@ -691,16 +691,16 @@ namespace INFOIBV
 
             // loop over the image and calculate the image derivative
             for (int y = 0; (y < tempImage.GetLength(1)); y++)
-            for (int x = 0; (x < tempImage.GetLength(0)); x++)
-            {
-                double hor = calcValue(sobelY, calcKernel(x, y));
-                double ver = calcValue(sobelX, calcKernel(x, y));
-                double answer = Math.Sqrt((hor * hor) + (ver * ver));
-                if (answer > 255)
-                    answer = 255;
-                tempImage[x, y] = (byte)answer;
-            }
-            
+                    for (int x = 0; (x < tempImage.GetLength(0)); x++)
+                    {
+                        double hor = calcValue(sobelY, calcKernel(x, y));
+                        double ver = calcValue(sobelX, calcKernel(x, y));
+                        double answer = Math.Sqrt((hor * hor) + (ver * ver));
+                        if (answer > 255)
+                            answer = 255;
+                        tempImage[x, y] = (byte)answer;
+                    }
+
             return tempImage;
 
             // Apply the sobel kernel to the given image kernel
@@ -708,8 +708,8 @@ namespace INFOIBV
             {
                 double total = 0;
                 for (int y = 0; y < 3; y++)
-                for (int x = 0; x < 3; x++)
-                    total += sobelKernel[x, y] * (double)kernel[x, y];
+                        for (int x = 0; x < 3; x++)
+                            total += sobelKernel[x, y] * (double)kernel[x, y];
 
                 return total;
             }
@@ -763,9 +763,9 @@ namespace INFOIBV
             {
                 double total = 0;
                 for (int y = 0; y < 3; y++)
-                for (int x = 0; x < 3; x++)
-                    total += sobelKernel[x, y] * (double)kernel[x, y];
-                    
+                        for (int x = 0; x < 3; x++)
+                            total += sobelKernel[x, y] * (double)kernel[x, y];
+
                 return total;
             }
 
@@ -795,17 +795,17 @@ namespace INFOIBV
 
             // iterate over the image pixels and threshold them
             for (int y = 0; y < tempImage.GetLength(1); y++)
-            for (int x = 0; x < tempImage.GetLength(0); x++)
-            {
-                if (inputImage[x, y] > thresholdValue)
-                    tempImage[x, y] = 255;
-                else
-                    tempImage[x, y] = 0;
-            }
-            
+                    for (int x = 0; x < tempImage.GetLength(0); x++)
+                    {
+                        if (inputImage[x, y] > thresholdValue)
+                            tempImage[x, y] = 255;
+                        else
+                            tempImage[x, y] = 0;
+                    }
+
             return tempImage;
         }
-        
+
         /// <summary>
         /// Parallel.
         /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
@@ -820,7 +820,7 @@ namespace INFOIBV
 
             // get the x size of the input image
             int inputXSize = tempImage.GetLength(0);
-            
+
             // iterate over the image pixels and threshold them
             ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
             {
@@ -831,14 +831,14 @@ namespace INFOIBV
                 else
                     tempImage[inputX, inputY] = 0;
             });
-            
+
             // throw and exception if any thread did not finish
             if (!loopResult.IsCompleted)
                 throw new Exception($"thresholdImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
-            
+
             return tempImage;
         }
-        
+
         /// <summary>
         /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
         /// </summary>
@@ -852,17 +852,17 @@ namespace INFOIBV
 
             // iterate over the image pixels and threshold them
             for (int y = 0; y < tempImage.GetLength(1); y++)
-            for (int x = 0; x < tempImage.GetLength(0); x++)
-            {
-                if (inputImage[x, y] > thresholdValue)
-                    tempImage[x, y] = 255;
-                else
-                    tempImage[x, y] = 0;
-            }
-            
+                    for (int x = 0; x < tempImage.GetLength(0); x++)
+                    {
+                        if (inputImage[x, y] > thresholdValue)
+                            tempImage[x, y] = 255;
+                        else
+                            tempImage[x, y] = 0;
+                    }
+
             return new BinaryImage(tempImage);
         }
-        
+
         /// <summary>
         /// Parallel.
         /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
@@ -877,7 +877,7 @@ namespace INFOIBV
 
             // get the x size of the input image
             int inputXSize = tempImage.GetLength(0);
-            
+
             // iterate over the image pixels and threshold them
             ParallelLoopResult loopResult = Parallel.For(0, inputImage.Length, index =>
             {
@@ -888,11 +888,11 @@ namespace INFOIBV
                 else
                     tempImage[inputX, inputY] = 0;
             });
-            
+
             // throw and exception if any thread did not finish
             if (!loopResult.IsCompleted)
                 throw new Exception($"thresholdImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
-            
+
             return new BinaryImage(tempImage);
         }
 
@@ -910,8 +910,8 @@ namespace INFOIBV
 
             //Count all the histrogram values
             for (int y = 0; y < inputImage.GetLength(1); y++)
-            for (int x = 0; x < inputImage.GetLength(0); x++)
-                histrogramValues[inputImage[x, y]]++;
+                    for (int x = 0; x < inputImage.GetLength(0); x++)
+                        histrogramValues[inputImage[x, y]]++;
 
             //Calculate probability 
             double[] probability = new double[256];
@@ -922,7 +922,7 @@ namespace INFOIBV
             double[] cumulativeProbability = new double[256];
             cumulativeProbability[0] = probability[0];
             for (int i = 1; i <= 255; i++)
-                cumulativeProbability[i] = cumulativeProbability[i-1] + probability[i];
+                cumulativeProbability[i] = cumulativeProbability[i  -  1] + probability[i];
 
             //Multiply by 255
             byte[] newValues = new byte[256];
@@ -931,8 +931,8 @@ namespace INFOIBV
 
             //add new values to new image
             for (int y = 0; y < tempImage.GetLength(1); y++)
-            for (int x = 0; x < tempImage.GetLength(0); x++)
-                tempImage[x, y] = newValues[inputImage[x, y]];
+                    for (int x = 0; x < tempImage.GetLength(0); x++)
+                        tempImage[x, y] = newValues[inputImage[x, y]];
 
             return tempImage;
         }
@@ -942,6 +942,55 @@ namespace INFOIBV
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 2 GO HERE ==============
         // ====================================================================
 
+        private enum StructuringElementShape
+        {
+            square,
+            cross
+        }
+
+        /// <summary>
+        /// Creates a structuring element
+        /// </summary>
+        /// <param name="elementShape">struct shape element</param>
+        /// <param name="size">size of the structuringlement</param>
+        /// <returns>single-channel (byte) image</returns>
+        byte[,] createStructuringElement(StructuringElementShape shape, int size)
+        {
+            byte[,] H = new byte[size, size];
+            switch (shape)
+            {
+                case StructuringElementShape.square:
+                    CreateSquareSE();
+                    break;
+                case StructuringElementShape.cross:
+                    CreateCrossSE();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(shape), shape, null);
+            }
+
+            void CreateSquareSE()
+            {
+                for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    H[x, y] = 255;
+                }
+
+            }
+
+            void CreateCrossSE()
+            {
+                
+            }
+
+            return H;
+        }
+        /// <summary>
+        /// Fills the histrogram in the UI and calculates the number of distinct values
+        /// </summary>
+        /// <param name="inputImage">single-channel (byte) image</param>
+        /// <returns>single-channel (byte) image</returns>
         void countValues(byte[,] inputImage)
         {
             //Count all the histrogram values
