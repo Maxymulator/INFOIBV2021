@@ -965,7 +965,27 @@ namespace INFOIBV
             }
             chart1.Titles.Add("Number of distinct Values: " + nDistinctValues);
         }
+        /// <summary>
+        /// Computes the pixel-wise AND operation on the given binary images
+        /// </summary>
+        /// <param name="lhs">The left hand side BinaryImage</param>
+        /// <param name="rhs">The right hand side BinaryImage</param>
+        /// <returns>a BinaryImage containing the pixel-wise AND of the inputs</returns>
+        private BinaryImage andImage(BinaryImage lhs, BinaryImage rhs)
+        {
+            return lhs.AND(rhs);
+        }
 
+        /// <summary>
+        /// Computes the pixel-wise OR operation on the given binary images
+        /// </summary>
+        /// <param name="lhs">The left hand side BinaryImage</param>
+        /// <param name="rhs">The right hand side BinaryImage</param>
+        /// <returns>a BinaryImage containing the pixel-wise OR of the inputs</returns>
+        private BinaryImage orImage(BinaryImage lhs, BinaryImage rhs)
+        {
+            return lhs.OR(rhs);
+        }
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
