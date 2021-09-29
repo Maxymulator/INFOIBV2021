@@ -4,3 +4,5 @@ bin/*
 *.cache
 *.exe
 .vs/INFOIBV/v16/.suo
+obj/x86/Debug/INFOIBV.csproj.AssemblyReference.cache
+*.cache

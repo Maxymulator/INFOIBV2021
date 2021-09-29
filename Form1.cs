@@ -593,36 +593,26 @@ namespace INFOIBV
         /// <returns>Single-channel (byte) image</returns>
         private byte[,] medianFilter(byte[,] inputImage, byte size)
         {
-            //TODO: clean
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             int boundryPixels = size / 2;
 
             for (int y = boundryPixels; y < (inputImage.GetLength(1) - boundryPixels); y++)
+            for (int x = boundryPixels; x < (inputImage.GetLength(0) - boundryPixels); x++)
             {
-                for (int x = boundryPixels; x < (inputImage.GetLength(0) - boundryPixels); x++)
-                {
-                    //Add all kernel Values to a list
-                    List<byte> kernelValues = new List<byte>();
-                    for (int yK = 0; yK < size; yK++)
-                    {
-                        for (int xK = 0; xK < size; xK++)
-                        {
-
-                            kernelValues.Add(inputImage[GetRefImageXMirrored(x, xK, boundryPixels, inputImage.GetLength(0)),
-                                                        GetRefImageYMirrored(y, yK, boundryPixels, inputImage.GetLength(1))]);
-                        }
-                    }
-                    //sort list
-                    kernelValues.Sort();
-
-                    int medianIndex = (int)Math.Ceiling(((double)(size * size) / 2));
-
-                    tempImage[x, y] = kernelValues[medianIndex];
-
-                }
+                //Add all kernel Values to a list
+                List<byte> kernelValues = new List<byte>();
+                for (int yK = 0; yK < size; yK++)
+                for (int xK = 0; xK < size; xK++)
+                    kernelValues.Add(inputImage[GetRefImageXMirrored(x, xK, boundryPixels, inputImage.GetLength(0)),
+                        GetRefImageYMirrored(y, yK, boundryPixels, inputImage.GetLength(1))]);
+                
+                //sort list
+                kernelValues.Sort();
+                int medianIndex = (int)Math.Ceiling(((double)(size * size) / 2));
+                tempImage[x, y] = kernelValues[medianIndex];
             }
-
+            
             return tempImage;
         }
 
