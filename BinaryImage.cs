@@ -9,14 +9,10 @@ namespace INFOIBV
         // The stored binary image
         private byte[,] _image;
         
-        // The x size of the binary image
-
         /// <summary>
         /// The x size of the binary image
         /// </summary>
         public int XSize { get; }
-
-        // The y size of the binary image
 
         /// <summary>
         /// The y size of the binary image
