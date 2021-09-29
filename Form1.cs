@@ -944,25 +944,28 @@ namespace INFOIBV
 
         private enum StructuringElementShape
         {
-            square,
-            cross
+            Square,
+            Cross
         }
 
         /// <summary>
         /// Creates a structuring element
         /// </summary>
-        /// <param name="elementShape">struct shape element</param>
+        /// <param name="shape">struct shape element</param>
         /// <param name="size">size of the structuringlement</param>
         /// <returns>single-channel (byte) image</returns>
         byte[,] createStructuringElement(StructuringElementShape shape, int size)
         {
+            if (size % 2 == 0)
+                throw new ArgumentException("createStructuringElement got a even size");
+            
             byte[,] H = new byte[size, size];
             switch (shape)
             {
-                case StructuringElementShape.square:
+                case StructuringElementShape.Square:
                     CreateSquareSE();
                     break;
-                case StructuringElementShape.cross:
+                case StructuringElementShape.Cross:
                     CreateCrossSE();
                     break;
                 default:
@@ -976,12 +979,16 @@ namespace INFOIBV
                 {
                     H[x, y] = 255;
                 }
-
             }
 
             void CreateCrossSE()
             {
-                
+                int crossIndex = size / 2;
+                for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    H[x, y] = (x == crossIndex || y == crossIndex) ? (byte) 255 : (byte) 0;
+                }
             }
 
             return H;
