@@ -150,9 +150,26 @@ namespace INFOIBV
             // ====================================================================
 
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
-            workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
+            workingImage = new byte[,]
+            {
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
+            };
+            workingImage = erodeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
+            //workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
 
-            countValues(workingImage);
+            //countValues(workingImage);
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
 
@@ -1076,7 +1093,8 @@ namespace INFOIBV
             
             // Store the size of the structuring element
             int seSize = structuringElement.GetLength(0);
-            
+            int seSizeDelta = seSize / 2;
+
             // Create a temporary working image
             byte[,] tempImage = new byte[xSize, ySize];
             
@@ -1097,8 +1115,8 @@ namespace INFOIBV
                 for (int seX = 0; seX < seSize; seX++)
                 {
                     // Get the actual coordinates to reference in the input image
-                    int refX = x + (seX - seSize);
-                    int refY = y + (seY - seSize);
+                    int refX = x + (seX - seSizeDelta);
+                    int refY = y + (seY - seSizeDelta);
                     
                     // Check if the reference coordinates are out of bounds and add 0 (background) to the valList if they are
                     if (refX < 0 || refX >= xSize)
@@ -1129,6 +1147,7 @@ namespace INFOIBV
             
             // Store the size of the structuring element
             int seSize = structuringElement.GetLength(0);
+            int seSizeDelta = seSize / 2;
             
             // Create a temporary working image
             byte[,] tempImage = new byte[xSize, ySize];
@@ -1150,8 +1169,8 @@ namespace INFOIBV
                 for (int seX = 0; seX < seSize; seX++)
                 {
                     // Get the actual coordinates to reference in the input image
-                    int refX = x + (seX - seSize);
-                    int refY = y + (seY - seSize);
+                    int refX = x + (seX - seSizeDelta);
+                    int refY = y + (seY - seSizeDelta);
                     
                     // Check if the reference coordinates are out of bounds and add 0 (background) to the valList if they are
                     if (refX < 0 || refX >= xSize)
