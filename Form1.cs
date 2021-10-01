@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -153,11 +153,11 @@ namespace INFOIBV
             workingImage = thresholdImage(workingImage, 10);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 13));
             workingImage = invertImage(workingImage);
-            byte[,] element = createStructuringElement(StructuringElementShape.Plus, 83);
-            workingImage = openImage(workingImage, element);
+            countForegroundValues(new BinaryImage(workingImage));
+            //workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 17));
             //workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
 
-            countValues(workingImage);
+            //countValues(workingImage);
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
 
@@ -1256,6 +1256,24 @@ namespace INFOIBV
                     nDistinctValues++;
             }
             chart1.Titles.Add("Number of distinct Values: " + nDistinctValues);
+        }
+
+        /// <summary>
+        /// Counts the number of foreground values and displays it to the UI
+        /// </summary>
+        /// <param name="inputImage">single-channel (byte) image</param>
+        void countForegroundValues(BinaryImage inputImage)
+        {
+            chart1.Titles.Clear();
+            int fgValues = 0;
+            for (int y = 0; y < inputImage.XSize; y++)
+            for (int x = 0; x < inputImage.YSize; x++)
+            {
+                if (inputImage.GetPixelBool(x, y))
+                    fgValues += 1;
+            }
+
+            chart1.Titles.Add($"Number of foreground values: {fgValues}");
         }
         
 
