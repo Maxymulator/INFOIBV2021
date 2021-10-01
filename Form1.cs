@@ -150,10 +150,11 @@ namespace INFOIBV
             // ====================================================================
 
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
-            //workingImage = thresholdImage(workingImage, 10);
+            workingImage = thresholdImage(workingImage, 10);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 13));
-            
-            workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 17));
+            workingImage = invertImage(workingImage);
+            byte[,] element = createStructuringElement(StructuringElementShape.Plus, 83);
+            workingImage = openImage(workingImage, element);
             //workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
 
             countValues(workingImage);
@@ -1141,7 +1142,7 @@ namespace INFOIBV
                         valList.Add(0);
                     else
                         // Add the value to the valList with respect to the structuring element
-                        valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte) 0);
+                        valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte) 255);
                 }
                 
                 // Return the lowest value of the neighborhood to erode the image
@@ -1257,6 +1258,7 @@ namespace INFOIBV
             chart1.Titles.Add("Number of distinct Values: " + nDistinctValues);
         }
         
+
         /// <summary>
         /// Computes the pixel-wise AND operation on the given binary images
         /// </summary>
