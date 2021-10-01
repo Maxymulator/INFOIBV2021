@@ -149,21 +149,14 @@ namespace INFOIBV
             // Alternatively you can create buttons to invoke certain functionality
             // ====================================================================
 
-            byte[,] imageW = convertToGrayscale(Image); // convert image to grayscale
-            imageW = thresholdImage(imageW, 10);
-
-            byte[,] imageX = dilateImage(imageW, createStructuringElement(StructuringElementShape.Square, 3));
-            BinaryImage imageXBin = new BinaryImage(thresholdImage(imageX, 10));
-            byte[,] imageY = erodeImage(imageW, createStructuringElement(StructuringElementShape.Square, 3));
-            imageY = invertImage(imageY); // Get the complement
-            BinaryImage imageYBin = new BinaryImage(thresholdImage(imageY, 10));
-            BinaryImage imageZBin = imageXBin.AND(imageYBin);
-            byte[,] workingImage = imageZBin.GetImage();
+            byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
+            //workingImage = thresholdImage(workingImage, 10);
+            //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 13));
             
-            //workingImage = erodeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
+            workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 17));
             //workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
 
-            //countValues(workingImage);
+            countValues(workingImage);
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
 
