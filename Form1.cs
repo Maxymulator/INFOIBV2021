@@ -151,9 +151,9 @@ namespace INFOIBV
 
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
             workingImage = thresholdImage(workingImage, 10);
-            workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 13));
+            //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 13));
             
-            //workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
+            workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
 
             //countValues(workingImage);
