@@ -153,7 +153,7 @@ namespace INFOIBV
             workingImage = thresholdImage(workingImage, 10);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 13));
             
-            workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
+            workingImage = erodeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
 
             //countValues(workingImage);
