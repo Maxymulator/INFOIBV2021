@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
@@ -151,7 +152,10 @@ namespace INFOIBV
             // ====================================================================
 
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
+            //workingImage = invertImage(workingImage);
             workingImage = thresholdImage(workingImage, 10);
+            workingImage = getLargestObject(new BinaryImage(workingImage), 3, 3).GetImage();
+            //workingImage = invertImage(workingImage);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 13));
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 3));
             List<Point> boundary = contourTrace(new BinaryImage(workingImage));
@@ -159,6 +163,7 @@ namespace INFOIBV
             countForegroundValues(new BinaryImage(workingImage));
             //workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 17));
             //workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
+            //workingImage = medianFilterParallel(workingImage, 5);
 
             //countValues(workingImage);
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -174,7 +179,43 @@ namespace INFOIBV
 
             pictureBox2.Image = OutputImage; // display output image
         }
+        
+        /*
+         * button_GetLargest_Click: process when user clicks Get Largest Object button
+         */
+        private void buttonGetLargest_Click_1(object sender, EventArgs e)
+        {
+            if (InputImage == null) return; // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose(); // reset output image
+            OutputImage = new Bitmap(InputImage.Size.Width, InputImage.Size.Height); // create new output image
+            Color[,]
+                Image = new Color[InputImage.Size.Width,
+                    InputImage.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
 
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage.Size.Width; x++) // loop over columns
+            for (int y = 0; y < InputImage.Size.Height; y++) // loop over rows
+                Image[x, y] = InputImage.GetPixel(x, y); // set pixel color in array at (x,y)
+
+            // convert image to grayscale
+            byte[,] workingImage = convertToGrayscale(Image); 
+            
+            // Threshold the image
+            workingImage = thresholdImage(workingImage, 10);
+            
+            // Get the largest object in the image
+            workingImage = getLargestObject(new BinaryImage(workingImage), 3, 3).GetImage();
+
+            // copy array to output Bitmap
+            for (int x = 0; x < workingImage.GetLength(0); x++) // loop over columns
+            for (int y = 0; y < workingImage.GetLength(1); y++) // loop over rows
+            {
+                Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
+            }
+
+            pictureBox2.Image = OutputImage; // display output image
+        }
 
         /*
          * saveButton_Click: process when user clicks "Save" button
@@ -1104,8 +1145,9 @@ namespace INFOIBV
         /// </summary>
         /// <param name="input">The byte[,] image to erode</param>
         /// <param name="structuringElement">The byte[,] structuring element to reference</param>
+        /// <param name="controlImage">The byte[,] control image / mask for geodesic operation</param>
         /// <returns>The eroded byte[,] image</returns>
-        private byte[,] erodeImage(byte[,] input, byte[,] structuringElement)
+        private byte[,] erodeImage(byte[,] input, byte[,] structuringElement, byte[,] controlImage = null)
         {
             // Store the size of the input
             int xSize = input.GetLength(0);
@@ -1114,6 +1156,10 @@ namespace INFOIBV
             // Store the size of the structuring element
             int seSize = structuringElement.GetLength(0);
             int seSizeDelta = seSize / 2;
+            
+            // Check the controlImage if needed
+            if (controlImage is not null && (controlImage.GetLength(0) != xSize || controlImage.GetLength(1) != ySize))
+                throw new ArgumentException("erodeImage got a control image which did not match the input image in size");
 
             // Create a temporary working image
             byte[,] tempImage = new byte[xSize, ySize];
@@ -1147,19 +1193,28 @@ namespace INFOIBV
                         // Add the value to the valList with respect to the structuring element
                         valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte) 255);
                 }
+
+                // Get the lowest value of the neighborhood
+                byte returnVal = valList.Min();
                 
-                // Return the lowest value of the neighborhood to erode the image
-                return valList.Min();
+                // Apply the mask if necessary
+                if (controlImage is not null)
+                    returnVal = Math.Max(returnVal, controlImage[x, y]);
+
+                // Return the lowest value to erode the image
+                return returnVal;
             }
         }
         
         /// <summary>
-        /// Dilates the given image with respect to the given structuring element
+        /// Parallel
+        /// Erodes the given image with respect to the given structuring element
         /// </summary>
-        /// <param name="input">The byte[,] image to dilate</param>
+        /// <param name="input">The byte[,] image to erode</param>
         /// <param name="structuringElement">The byte[,] structuring element to reference</param>
-        /// <returns>The dilated byte[,] image</returns>
-        private byte[,] dilateImage(byte[,] input, byte[,] structuringElement)
+        /// <param name="controlImage">The byte[,] control image / mask for geodesic operation</param>
+        /// <returns>The eroded byte[,] image</returns>
+        private byte[,] erodeImageParallel(byte[,] input, byte[,] structuringElement, byte[,] controlImage = null)
         {
             // Store the size of the input
             int xSize = input.GetLength(0);
@@ -1168,6 +1223,81 @@ namespace INFOIBV
             // Store the size of the structuring element
             int seSize = structuringElement.GetLength(0);
             int seSizeDelta = seSize / 2;
+            
+            // Check the controlImage if needed
+            if (controlImage is not null && (controlImage.GetLength(0) != xSize || controlImage.GetLength(1) != ySize))
+                throw new ArgumentException("erodeImage got a control image which did not match the input image in size");
+
+            // Create a temporary working image
+            byte[,] tempImage = new byte[xSize, ySize];
+            
+            // Iterate over the input image, applying erosion with respect to the given structuring element
+            ParallelLoopResult loopResult = Parallel.For(0, input.Length, index =>
+            {
+                int inputX = index % xSize; // gets the x coord from the loop index
+                int inputY = index / xSize; // gets the y coord from the loop index
+                tempImage[inputX, inputY] = ApplyStructuringElement(inputX, inputY);
+            });
+            
+            if (!loopResult.IsCompleted)
+                throw new Exception(
+                    $"erodeImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
+
+            return tempImage;
+
+            // Apply the given structuring element to the given pixel
+            byte ApplyStructuringElement(int x, int y)
+            {
+                List<byte> valList = new List<byte>();
+                for (int seY = 0; seY < seSize; seY++)
+                for (int seX = 0; seX < seSize; seX++)
+                {
+                    // Get the actual coordinates to reference in the input image
+                    int refX = x + (seX - seSizeDelta);
+                    int refY = y + (seY - seSizeDelta);
+                    
+                    // Check if the reference coordinates are out of bounds and add 0 (background) to the valList if they are
+                    if (refX < 0 || refX >= xSize)
+                        valList.Add(0);
+                    else if (refY < 0 || refY >= ySize)
+                        valList.Add(0);
+                    else
+                        // Add the value to the valList with respect to the structuring element
+                        valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte) 255);
+                }
+
+                // Get the lowest value of the neighborhood
+                byte returnVal = valList.Min();
+                
+                // Apply the mask if necessary
+                if (controlImage is not null)
+                    returnVal = Math.Max(returnVal, controlImage[x, y]);
+
+                // Return the lowest value to erode the image
+                return returnVal;
+            }
+        }
+        
+        /// <summary>
+        /// Dilates the given image with respect to the given structuring element
+        /// </summary>
+        /// <param name="input">The byte[,] image to dilate</param>
+        /// <param name="structuringElement">The byte[,] structuring element to reference</param>
+        /// <param name="controlImage">The byte[,] control image / mask for geodesic operation</param>
+        /// <returns>The dilated byte[,] image</returns>
+        private byte[,] dilateImage(byte[,] input, byte[,] structuringElement, byte[,] controlImage = null)
+        {
+            // Store the size of the input
+            int xSize = input.GetLength(0);
+            int ySize = input.GetLength(1);
+            
+            // Store the size of the structuring element
+            int seSize = structuringElement.GetLength(0);
+            int seSizeDelta = seSize / 2;
+            
+            // Check the controlImage if needed
+            if (controlImage is not null && (controlImage.GetLength(0) != xSize || controlImage.GetLength(1) != ySize))
+                throw new ArgumentException("erodeImage got a control image which did not match the input image in size");
             
             // Create a temporary working image
             byte[,] tempImage = new byte[xSize, ySize];
@@ -1201,9 +1331,87 @@ namespace INFOIBV
                         // Add the value to the valList with respect to the structuring element
                         valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte) 0);
                 }
+                // Get the lowest value of the neighborhood
+                byte returnVal = valList.Max();
                 
-                // Return the highest value of the neighborhood to dilate the image
-                return valList.Max();
+                // Apply the mask if necessary
+                if (controlImage is not null)
+                    returnVal = Math.Min(returnVal, controlImage[x, y]);
+
+                // Return the lowest value to erode the image
+                return returnVal;
+            }
+        }
+        
+        /// <summary>
+        /// Parallel
+        /// Dilates the given image with respect to the given structuring element
+        /// </summary>
+        /// <param name="input">The byte[,] image to dilate</param>
+        /// <param name="structuringElement">The byte[,] structuring element to reference</param>
+        /// <param name="controlImage">The byte[,] control image / mask for geodesic operation</param>
+        /// <returns>The dilated byte[,] image</returns>
+        private byte[,] dilateImageParallel(byte[,] input, byte[,] structuringElement, byte[,] controlImage = null)
+        {
+            // Store the size of the input
+            int xSize = input.GetLength(0);
+            int ySize = input.GetLength(1);
+            
+            // Store the size of the structuring element
+            int seSize = structuringElement.GetLength(0);
+            int seSizeDelta = seSize / 2;
+            
+            // Check the controlImage if needed
+            if (controlImage is not null && (controlImage.GetLength(0) != xSize || controlImage.GetLength(1) != ySize))
+                throw new ArgumentException("erodeImage got a control image which did not match the input image in size");
+            
+            // Create a temporary working image
+            byte[,] tempImage = new byte[xSize, ySize];
+            
+            // Iterate over the input image, applying dilation with respect to the given structuring element
+            ParallelLoopResult loopResult = Parallel.For(0, input.Length, index =>
+            {
+                int inputX = index % xSize; // gets the x coord from the loop index
+                int inputY = index / xSize; // gets the y coord from the loop index
+                tempImage[inputX, inputY] = ApplyStructuringElement(inputX, inputY);
+            });
+            
+            if (!loopResult.IsCompleted)
+                throw new Exception(
+                    $"erodeImageParallel did not complete it's loop to completion, stopped at iteration {loopResult.LowestBreakIteration}");
+
+
+            return tempImage;
+
+            // Apply the given structuring element to the given pixel
+            byte ApplyStructuringElement(int x, int y)
+            {
+                List<byte> valList = new List<byte>();
+                for (int seY = 0; seY < seSize; seY++)
+                for (int seX = 0; seX < seSize; seX++)
+                {
+                    // Get the actual coordinates to reference in the input image
+                    int refX = x + (seX - seSizeDelta);
+                    int refY = y + (seY - seSizeDelta);
+                    
+                    // Check if the reference coordinates are out of bounds and add 0 (background) to the valList if they are
+                    if (refX < 0 || refX >= xSize)
+                        valList.Add(0);
+                    else if (refY < 0 || refY >= ySize)
+                        valList.Add(0);
+                    else
+                        // Add the value to the valList with respect to the structuring element
+                        valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte) 0);
+                }
+                // Get the lowest value of the neighborhood
+                byte returnVal = valList.Max();
+                
+                // Apply the mask if necessary
+                if (controlImage is not null)
+                    returnVal = Math.Min(returnVal, controlImage[x, y]);
+
+                // Return the lowest value to erode the image
+                return returnVal;
             }
         }
         
@@ -1427,8 +1635,80 @@ namespace INFOIBV
             return lhs.OR(rhs);
         }
 
+        private BinaryImage getLargestObject(BinaryImage input, int erodeSize, int dilateSize)
+        {
+            byte[,] curIteration = input.GetImage();
+            byte[,] prevIteration = curIteration;
+
+            // Erode the image until there are no foreground pixels remaining
+            while (checkIfAtLeastOnePixelIsForeground(new BinaryImage(curIteration)))
+            {
+                prevIteration = curIteration;
+                curIteration = erodeImageParallel(curIteration, createStructuringElement(StructuringElementShape.Square, erodeSize));
+            }
+            // After this loop, we know the previous iteration only holds a pixel that was contained in the largest object
+            
+            // Reset the variables
+            curIteration = prevIteration;
+            prevIteration = null;
+            
+            // Geodisic dilate the image until stable, where the largest object is back to its original size
+            while (!checkIfSamePicture(curIteration, prevIteration))
+            {
+                prevIteration = curIteration;
+                curIteration = dilateImageParallel(curIteration, createStructuringElement(StructuringElementShape.Square, dilateSize),
+                    input.GetImage());
+            }
+
+            return new BinaryImage(curIteration);
+        }
+
+        /// <summary>
+        /// Check if there is at least one foreground pixel remaining
+        /// </summary>
+        /// <param name="input">binary image</param>
+        /// <returns>true if there is at least 1 pixel remaining</returns>
+        private bool checkIfAtLeastOnePixelIsForeground(BinaryImage input)
+        {
+            foreach (byte pixel in input.GetImage())
+            {
+                if (pixel == 255)
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Check if the given images are the same image
+        /// </summary>
+        /// <param name="lhs">byte[,] image</param>
+        /// <param name="rhs">byte[,] image</param>
+        /// <returns>true if the images are the same</returns>
+        /// <exception cref="ArgumentException"></exception>
+        private bool checkIfSamePicture(byte[,] lhs, byte[,] rhs)
+        {
+            if (lhs is null)
+                return rhs is null;
+            if (rhs is null)
+                return false;
+
+            if (lhs.GetLength(0) != rhs.GetLength(0) || lhs.GetLength(1) != rhs.GetLength(1))
+                throw new ArgumentException("checkIfSamePicture got images which dont match in size");
+
+            for (int y = 0; y < lhs.GetLength(1); y++)
+            for (int x = 0; x < lhs.GetLength(0); x++)
+            {
+                if (lhs[x, y] != rhs[x, y])
+                    return false;
+            }
+
+            return true;
+        }
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
+
+        
     }
 }
