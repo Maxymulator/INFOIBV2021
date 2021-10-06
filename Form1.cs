@@ -153,6 +153,7 @@ namespace INFOIBV
 
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
             countValues(workingImage);
+            workingImage = thresholdImage(workingImage, 100);
             List<Point> boundary = contourTrace(new BinaryImage(workingImage));
             workingImage = createBoundaryImage(workingImage.GetLength(0), workingImage.GetLength(1), boundary);
             
