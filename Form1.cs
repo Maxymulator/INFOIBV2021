@@ -152,7 +152,9 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
             workingImage = thresholdImage(workingImage, 10);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 13));
+            //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 3));
             workingImage = invertImage(workingImage);
+            workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 43));
             countForegroundValues(new BinaryImage(workingImage));
             //workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 17));
             //workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
@@ -1266,8 +1268,8 @@ namespace INFOIBV
         {
             chart1.Titles.Clear();
             int fgValues = 0;
-            for (int y = 0; y < inputImage.XSize; y++)
-            for (int x = 0; x < inputImage.YSize; x++)
+            for (int y = 0; y < inputImage.YSize; y++)
+            for (int x = 0; x < inputImage.XSize; x++)
             {
                 if (inputImage.GetPixelBool(x, y))
                     fgValues += 1;
