@@ -152,20 +152,10 @@ namespace INFOIBV
             // ====================================================================
 
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
-            //workingImage = invertImage(workingImage);
-            workingImage = thresholdImage(workingImage, 10);
-            workingImage = getLargestObject(new BinaryImage(workingImage), 3, 3).GetImage();
-            //workingImage = invertImage(workingImage);
-            //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 13));
-            //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 3));
+            countValues(workingImage);
             List<Point> boundary = contourTrace(new BinaryImage(workingImage));
             workingImage = createBoundaryImage(workingImage.GetLength(0), workingImage.GetLength(1), boundary);
-            countForegroundValues(new BinaryImage(workingImage));
-            //workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 17));
-            //workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
-            //workingImage = medianFilterParallel(workingImage, 5);
-
-            //countValues(workingImage);
+            
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
 
