@@ -1103,8 +1103,9 @@ namespace INFOIBV
         /// </summary>
         /// <param name="input">The byte[,] image to erode</param>
         /// <param name="structuringElement">The byte[,] structuring element to reference</param>
+        /// <param name="controlImage">The byte[,] control image / mask for geodesic operation</param>
         /// <returns>The eroded byte[,] image</returns>
-        private byte[,] erodeImage(byte[,] input, byte[,] structuringElement)
+        private byte[,] erodeImage(byte[,] input, byte[,] structuringElement, byte[,] controlImage = null)
         {
             // Store the size of the input
             int xSize = input.GetLength(0);
@@ -1113,6 +1114,10 @@ namespace INFOIBV
             // Store the size of the structuring element
             int seSize = structuringElement.GetLength(0);
             int seSizeDelta = seSize / 2;
+            
+            // Check the controlImage if needed
+            if (controlImage is not null && (controlImage.GetLength(0) != xSize || controlImage.GetLength(1) != ySize))
+                throw new ArgumentException("erodeImage got a control image which did not match the input image in size");
 
             // Create a temporary working image
             byte[,] tempImage = new byte[xSize, ySize];
@@ -1146,9 +1151,16 @@ namespace INFOIBV
                         // Add the value to the valList with respect to the structuring element
                         valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte) 255);
                 }
+
+                // Get the lowest value of the neighborhood
+                byte returnVal = valList.Min();
                 
-                // Return the lowest value of the neighborhood to erode the image
-                return valList.Min();
+                // Apply the mask if necessary
+                if (controlImage is not null)
+                    returnVal = Math.Max(returnVal, controlImage[x, y]);
+
+                // Return the lowest value to erode the image
+                return returnVal;
             }
         }
         
@@ -1157,8 +1169,9 @@ namespace INFOIBV
         /// </summary>
         /// <param name="input">The byte[,] image to dilate</param>
         /// <param name="structuringElement">The byte[,] structuring element to reference</param>
+        /// <param name="controlImage">The byte[,] control image / mask for geodesic operation</param>
         /// <returns>The dilated byte[,] image</returns>
-        private byte[,] dilateImage(byte[,] input, byte[,] structuringElement)
+        private byte[,] dilateImage(byte[,] input, byte[,] structuringElement, byte[,] controlImage = null)
         {
             // Store the size of the input
             int xSize = input.GetLength(0);
@@ -1167,6 +1180,10 @@ namespace INFOIBV
             // Store the size of the structuring element
             int seSize = structuringElement.GetLength(0);
             int seSizeDelta = seSize / 2;
+            
+            // Check the controlImage if needed
+            if (controlImage is not null && (controlImage.GetLength(0) != xSize || controlImage.GetLength(1) != ySize))
+                throw new ArgumentException("erodeImage got a control image which did not match the input image in size");
             
             // Create a temporary working image
             byte[,] tempImage = new byte[xSize, ySize];
@@ -1200,9 +1217,15 @@ namespace INFOIBV
                         // Add the value to the valList with respect to the structuring element
                         valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte) 0);
                 }
+                // Get the lowest value of the neighborhood
+                byte returnVal = valList.Max();
                 
-                // Return the highest value of the neighborhood to dilate the image
-                return valList.Max();
+                // Apply the mask if necessary
+                if (controlImage is not null)
+                    returnVal = Math.Min(returnVal, controlImage[x, y]);
+
+                // Return the lowest value to erode the image
+                return returnVal;
             }
         }
         
