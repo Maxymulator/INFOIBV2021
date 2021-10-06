@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 
+
 namespace INFOIBV
 {
     public partial class INFOIBV : Form
@@ -153,8 +154,8 @@ namespace INFOIBV
             workingImage = thresholdImage(workingImage, 10);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 13));
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Plus, 3));
-            workingImage = invertImage(workingImage);
-            workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 43));
+            List<Point> boundary = contourTrace(new BinaryImage(workingImage));
+            workingImage = createBoundaryImage(workingImage.GetLength(0), workingImage.GetLength(1), boundary);
             countForegroundValues(new BinaryImage(workingImage));
             //workingImage = dilateImage(workingImage, createStructuringElement(StructuringElementShape.Square, 17));
             //workingImage = histrogramEqualization(workingImage); // apply histogram equalisation
@@ -1231,6 +1232,114 @@ namespace INFOIBV
         }
 
         /// <summary>
+        /// closes the image by doing a dilation followed by an erosion
+        /// </summary>
+        /// <param name="inputImage">single-channel (byte) image</param>
+        /// <returns>single-channel (byte) image</returns>
+        private List<Point> contourTrace(BinaryImage inputImage)
+        {
+            List<Point> boundaryPixels = new List<Point>();
+            Point lastPixel = findFirstPoint();
+
+            boundaryPixels.Add(lastPixel);
+            Point startPosRotation = new Point(0,1);
+            Point newPixel = findNextBoundaryPixel(lastPixel, startPosRotation);
+            boundaryPixels.Add(newPixel);
+
+            while (boundaryPixels[0] != boundaryPixels.Last())
+            {
+                startPosRotation = calcStartingPosRotation();
+                lastPixel = newPixel;
+                newPixel = findNextBoundaryPixel(newPixel, startPosRotation);
+                boundaryPixels.Add(newPixel);   
+            }
+            
+            return boundaryPixels;
+
+            Point findFirstPoint()
+            {
+                for (int y = 0; y < inputImage.YSize; y++)
+                for (int x = 0; x < inputImage.XSize; x++)
+                {
+                    if (inputImage.GetPixelBool(x, y))
+                    {
+                        return new Point(x, y);
+                    }
+                }
+                throw new ArgumentException("Empty Image!");
+            }
+
+            Point findNextBoundaryPixel(Point pixel, Point startingPos)
+            {
+                Point newPoint = addPoints(pixel, new Point(startingPos.X -1, startingPos.Y -1));
+                while (!allowedValue(newPoint))
+                {
+                    startingPos = step(startingPos);
+                    newPoint = addPoints(pixel, new Point(startingPos.X - 1, startingPos.Y - 1));
+                }
+
+                while (!inputImage.GetPixelBool(newPoint.X, newPoint.Y))
+                {
+                    startingPos = step(startingPos);
+                    Point temp = addPoints(lastPixel, new Point(startingPos.X - 1, startingPos.Y - 1));
+                    if (allowedValue(temp))
+                        newPoint = addPoints(lastPixel, new Point(startingPos.X - 1, startingPos.Y - 1));
+                }
+                return newPoint;
+            }
+
+            bool allowedValue(Point i)
+            {
+                if (i.X >= 0 && i.X < inputImage.XSize && i.Y >=0 && i.Y < inputImage.YSize)
+                    return true;
+                else
+                    return false;
+            }
+
+            Point addPoints(Point a, Point b)
+            {
+                return new Point(a.X + b.X, a.Y + b.Y);
+            }
+
+            Point step(Point point)
+            {
+                if (point.X < 2 && point.Y == 2)
+                    return new Point(++point.X, point.Y);
+                if (point.X == 2 && point.Y > 0)
+                    return new Point(point.X, --point.Y);
+                if (point.X > 0 && point.Y == 0)
+                    return new Point(--point.X, point.Y);
+                if (point.X == 0 && point.Y < 2)
+                    return new Point(point.X, ++point.Y);
+                throw new ArgumentException("Something went wrong with the step!");
+            }
+
+            Point calcStartingPosRotation()
+            {
+                float x = lastPixel.X - newPixel.X;
+                float y = lastPixel.Y - newPixel.Y;
+
+                if (x == 1 && y == 1)
+                    return new Point(2, 0);
+                else if (x == 1 && y == 0)
+                    return new Point(1, 0);
+                else if (x == 1 && y == -1)
+                    return new Point(0, 0);
+                else if (x == 0 && y == -1)
+                    return new Point(0, 1);
+                else if (x == -1 && y == -1)
+                    return new Point(0, 2);
+                else if (x == -1 && y == 0)
+                    return new Point(1, 2);
+                else if (x == -1 && y == 1)
+                    return new Point(2, 2);
+                else if (x == 0 && y == 1)
+                    return new Point(2, 1);
+                throw new ArgumentException("Points are not nex to eachother!");
+            }
+        }
+
+        /// <summary>
         /// Fills the histrogram in the UI and calculates the number of distinct values
         /// </summary>
         /// <param name="inputImage">single-channel (byte) image</param>
@@ -1278,7 +1387,24 @@ namespace INFOIBV
             chart1.Titles.Add($"Number of foreground values: {fgValues}");
         }
         
+        byte[,] createBoundaryImage(int sizeX, int sizeY, List<Point> boundaryPixels)
+        {
+            byte[,] image = new byte[sizeX, sizeY];
 
+            for (int y = 0; y < sizeY; y++)
+            {
+                for (int x = 0; x < sizeX; x++)
+                {
+                    image[x, y] = 255;
+                }
+            }
+            foreach (Point pixel in boundaryPixels)
+            {
+                image[pixel.X, pixel.Y] = 0;
+            }
+            return image;
+
+        }
         /// <summary>
         /// Computes the pixel-wise AND operation on the given binary images
         /// </summary>
