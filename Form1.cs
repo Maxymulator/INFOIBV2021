@@ -179,7 +179,43 @@ namespace INFOIBV
 
             pictureBox2.Image = OutputImage; // display output image
         }
+        
+        /*
+         * button_GetLargest_Click: process when user clicks Get Largest Object button
+         */
+        private void buttonGetLargest_Click_1(object sender, EventArgs e)
+        {
+            if (InputImage == null) return; // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose(); // reset output image
+            OutputImage = new Bitmap(InputImage.Size.Width, InputImage.Size.Height); // create new output image
+            Color[,]
+                Image = new Color[InputImage.Size.Width,
+                    InputImage.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
 
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage.Size.Width; x++) // loop over columns
+            for (int y = 0; y < InputImage.Size.Height; y++) // loop over rows
+                Image[x, y] = InputImage.GetPixel(x, y); // set pixel color in array at (x,y)
+
+            // convert image to grayscale
+            byte[,] workingImage = convertToGrayscale(Image); 
+            
+            // Threshold the image
+            workingImage = thresholdImage(workingImage, 10);
+            
+            // Get the largest object in the image
+            workingImage = getLargestObject(new BinaryImage(workingImage), 3, 3).GetImage();
+
+            // copy array to output Bitmap
+            for (int x = 0; x < workingImage.GetLength(0); x++) // loop over columns
+            for (int y = 0; y < workingImage.GetLength(1); y++) // loop over rows
+            {
+                Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
+            }
+
+            pictureBox2.Image = OutputImage; // display output image
+        }
 
         /*
          * saveButton_Click: process when user clicks "Save" button
@@ -1547,5 +1583,7 @@ namespace INFOIBV
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
+
+        
     }
 }
