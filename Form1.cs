@@ -1606,30 +1606,6 @@ namespace INFOIBV
 
         }
 
-        private byte[,] houghTranform(BinaryImage inputImage)
-        {
-            int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
-            byte[,] paramSpaceArray = new byte[180, maxDistance * 2 + 1];
-            for (int y = 0; y < inputImage.YSize; y++)
-                for (int x = 0; x < inputImage.XSize; x++)
-                {
-                    if (inputImage.GetPixelBool(x, y))
-                    {
-                        applyHough(x, y);
-                    }
-                }
-            return paramSpaceArray;
-
-            void applyHough(int x, int y)
-            {
-                for (int i = 0; i < 180; i+= 1)
-                {
-                    double r = x * Math.Cos(Math.PI * i / 180) + y * Math.Sin(Math.PI * i / 180);
-                    paramSpaceArray[i, (int)r + maxDistance] += 1;
-                }
-            }
-        }
-
         /// <summary>
         /// Computes the pixel-wise AND operation on the given binary images
         /// </summary>
@@ -1726,6 +1702,33 @@ namespace INFOIBV
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
 
+        /// <summary>
+        /// builds a hough trnaform image out of a binary image
+        /// </summary>
+        /// <param name="inputImage">binary image</param>
+        /// <returns>single-channel hough tranform (byte) image</returns>
+        private byte[,] houghTranform(BinaryImage inputImage)
+        {
+            int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
+            byte[,] paramSpaceArray = new byte[180, maxDistance * 2 + 1];
+            for (int y = 0; y < inputImage.YSize; y++)
+                for (int x = 0; x < inputImage.XSize; x++)
+                {
+                    if (inputImage.GetPixelBool(x, y))
+                    {
+                        applyHough(x, y);
+                    }
+                }
+            return paramSpaceArray;
 
+            void applyHough(int x, int y)
+            {
+                for (int i = 0; i < 180; i += 1)
+                {
+                    double r = x * Math.Cos(Math.PI * i / 180) + y * Math.Sin(Math.PI * i / 180);
+                    paramSpaceArray[i, (int)r + maxDistance] += 1;
+                }
+            }
+        }
     }
 }
