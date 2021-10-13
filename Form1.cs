@@ -1733,7 +1733,6 @@ namespace INFOIBV
                 for (int i = 0; i < 179; i += 1)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180) + y * Math.Sin(Math.PI * i / 180);
-                    //paramSpaceArray[i, (int)r + maxDistance] += 1;
                     paramSpaceArray[i, (int)r + maxDistance] += (paramSpaceArray[i, (int)r + maxDistance] == (byte) 255) ? (byte)0 : (byte)1;
                 }
             }
@@ -1745,6 +1744,7 @@ namespace INFOIBV
         /// <returns>tuple of r-theta pairs where peaks are found</returns>
         private List<Point> peakFinding(BinaryImage inputImage)
         {
+            int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
             byte[,] imageByte = houghTranform(inputImage);
             //remove all unecessary data
             BinaryImage image = new BinaryImage(thresholdImage(imageByte, 10));
@@ -1779,7 +1779,7 @@ namespace INFOIBV
                     yTotal += point.Y;
                 }
                 //add the avererage point
-                centers.Add(new Point((int)(xTotal / region.Count), (int)(yTotal / region.Count)));
+                centers.Add(new Point((int)(xTotal / region.Count), (int)(yTotal / region.Count) - maxDistance));
             }
             return centers;
 
