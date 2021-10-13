@@ -154,7 +154,12 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
             countValues(workingImage);
             workingImage = thresholdImage(workingImage, 100);
+            peakFinding(new BinaryImage(workingImage));
             workingImage = houghTranform(new BinaryImage(workingImage));
+            workingImage = thresholdImage(workingImage, 10);
+
+            workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
+            
             //workingImage = thresholdImage(workingImage, 60);
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -1705,7 +1710,7 @@ namespace INFOIBV
         // ====================================================================
 
         /// <summary>
-        /// builds a hough trnaform image out of a binary image
+        /// builds a hough transform image out of a binary image
         /// </summary>
         /// <param name="inputImage">binary image</param>
         /// <returns>single-channel hough tranform (byte) image</returns>
@@ -1728,7 +1733,118 @@ namespace INFOIBV
                 for (int i = 0; i < 179; i += 1)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180) + y * Math.Sin(Math.PI * i / 180);
-                    paramSpaceArray[i, (int)r + maxDistance] += 1;
+                    //paramSpaceArray[i, (int)r + maxDistance] += 1;
+                    paramSpaceArray[i, (int)r + maxDistance] += (paramSpaceArray[i, (int)r + maxDistance] == (byte) 255) ? (byte)0 : (byte)1;
+                }
+            }
+        }
+        /// <summary>
+        /// finds peaks in a hough transform image
+        /// </summary>
+        /// <param name="inputImage">binary image</param>
+        /// <returns>tuple of r-theta pairs where peaks are found</returns>
+        private List<Point> peakFinding(BinaryImage inputImage)
+        {
+            byte[,] imageByte = houghTranform(inputImage);
+            //remove all unecessary data
+            BinaryImage image = new BinaryImage(thresholdImage(imageByte, 10));
+            //close image
+            image = new BinaryImage(closeImage(image.GetImage(), createStructuringElement(StructuringElementShape.Square, 3)));
+
+            //find regions with BFS
+            bool[,] foundPixels = new bool[image.XSize, image.YSize];
+            List<List<Point>> regions = new List<List<Point>>();
+            for (int y = 0; y < image.YSize; y++)
+            {
+                for (int x = 0; x < image.XSize; x++)
+                {
+                    if (image.GetPixelBool(x,y) && !foundPixels[x,y])
+                    {
+                        regions.Add(bfs(x, y));
+                    }
+                }
+            }
+
+
+            //find centers
+            List<Point> centers = new List<Point>();
+            foreach (var region in regions)
+            {
+                int xTotal = 0;
+                int yTotal = 0;
+
+                foreach (var point in region)
+                {
+                    xTotal += point.X;
+                    yTotal += point.Y;
+                }
+                //add the avererage point
+                centers.Add(new Point((int)(xTotal / region.Count), (int)(yTotal / region.Count)));
+            }
+            return centers;
+
+            List<Point> bfs(int x, int y)
+            {
+                Queue<Point> queue = new Queue<Point>();
+                bool[,] Visited = new bool[image.XSize, image.YSize];
+                List<Point> regionPixels = new List<Point>();
+                //add first point
+                queue.Enqueue(new Point(x, y));
+                Visited[x, y] = true;
+
+                while (queue.Count > 0)
+                {
+                    //get next point
+                    Point point = queue.Dequeue();
+                    //add point to list
+                    regionPixels.Add(point);
+                    //mark as added in foundPixels
+                    foundPixels[point.X, point.Y] = true;
+                    //find neigbouring points, add them to the queue and mark as visited
+                    List<Point> neighbours = findNeighbours(point);
+                    addNeighboursIfAllowed(neighbours);
+                }
+                return regionPixels;
+
+                void addNeighboursIfAllowed(List<Point> neighbours)
+                {
+                    foreach (Point neighbour in neighbours)
+                    {
+                        //check if in image range and not visted and pixel is filled.
+                        if (neighbour.X >=0 && neighbour.X < image.XSize && neighbour.Y >= 0 && neighbour.Y < image.YSize &&
+                            !Visited[neighbour.X, neighbour.Y] && image.GetPixelBool(neighbour.X, neighbour.Y))
+                        {
+                            queue.Enqueue(neighbour);
+                            Visited[neighbour.X, neighbour.Y] = true;
+                        }
+                    }
+                }
+
+                List<Point> findNeighbours(Point center)
+                {
+                    List<Point> neighbours = new List<Point>();
+                    Point index = new Point(-1, -1);
+                    neighbours.Add(new Point(center.X + index.X, center.Y + index.Y));
+
+                    for (int i = 0; i < 7; i++)
+                    {
+                        index = step(index);
+                        neighbours.Add(new Point(center.X + index.X, center.Y + index.Y));
+                    }
+                    return neighbours;
+                }
+
+                Point step(Point point)
+                {
+                    if (point.X < 1 && point.Y == 1)
+                        return new Point(++point.X, point.Y);
+                    if (point.X == 1 && point.Y > -1)
+                        return new Point(point.X, --point.Y);
+                    if (point.X > -1 && point.Y == -1)
+                        return new Point(--point.X, point.Y);
+                    if (point.X == -1 && point.Y < 1)
+                        return new Point(point.X, ++point.Y);
+                    throw new ArgumentException("Something went wrong with the step!");
                 }
             }
         }
