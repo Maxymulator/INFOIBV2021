@@ -1710,7 +1710,7 @@ namespace INFOIBV
         private byte[,] houghTranform(BinaryImage inputImage)
         {
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
-            byte[,] paramSpaceArray = new byte[180, maxDistance * 2 + 1];
+            byte[,] paramSpaceArray = new byte[179, maxDistance * 2 + 1];
             for (int y = 0; y < inputImage.YSize; y++)
                 for (int x = 0; x < inputImage.XSize; x++)
                 {
@@ -1723,7 +1723,7 @@ namespace INFOIBV
 
             void applyHough(int x, int y)
             {
-                for (int i = 0; i < 180; i += 1)
+                for (int i = 0; i < 179; i += 1)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180) + y * Math.Sin(Math.PI * i / 180);
                     paramSpaceArray[i, (int)r + maxDistance] += 1;
