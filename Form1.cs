@@ -154,9 +154,11 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
             countValues(workingImage);
             workingImage = thresholdImage(workingImage, 100);
-            peakFinding(new BinaryImage(workingImage));
+            List<Point> centers = peakFinding(new BinaryImage(workingImage));
+            //List<Tuple<Point,Point>> line = houghLineDetection(new BinaryImage(workingImage), centers[0], 1, 3);
+
             workingImage = houghTranform(new BinaryImage(workingImage));
-            workingImage = thresholdImage(workingImage, 10);
+            workingImage = thresholdImage(workingImage, 3);
 
             workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             
@@ -1717,7 +1719,7 @@ namespace INFOIBV
         private byte[,] houghTranform(BinaryImage inputImage)
         {
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
-            byte[,] paramSpaceArray = new byte[179, maxDistance * 2 + 1];
+            byte[,] paramSpaceArray = new byte[180, maxDistance * 2 + 1];
             for (int y = 0; y < inputImage.YSize; y++)
                 for (int x = 0; x < inputImage.XSize; x++)
                 {
@@ -1730,7 +1732,7 @@ namespace INFOIBV
 
             void applyHough(int x, int y)
             {
-                for (int i = 0; i < 179; i += 1)
+                for (int i = 0; i < 180; i += 30)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180) + y * Math.Sin(Math.PI * i / 180);
                     paramSpaceArray[i, (int)r + maxDistance] += (paramSpaceArray[i, (int)r + maxDistance] == (byte) 255) ? (byte)0 : (byte)1;
@@ -1747,7 +1749,7 @@ namespace INFOIBV
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
             byte[,] imageByte = houghTranform(inputImage);
             //remove all unecessary data
-            BinaryImage image = new BinaryImage(thresholdImage(imageByte, 10));
+            BinaryImage image = new BinaryImage(thresholdImage(imageByte, 3));
             //close image
             image = new BinaryImage(closeImage(image.GetImage(), createStructuringElement(StructuringElementShape.Square, 3)));
 
@@ -1977,8 +1979,8 @@ namespace INFOIBV
             List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
 
             // Extract the r and theta values
-            int inputR = rThetaPair.X;
-            int inputTheta = rThetaPair.Y;
+            int inputR = rThetaPair.Y;
+            int inputTheta = rThetaPair.X;
 
             // Create the variables for in the loop
             int curLineLength = 0;
