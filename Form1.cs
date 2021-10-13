@@ -1732,5 +1732,223 @@ namespace INFOIBV
                 }
             }
         }
+
+        /// <summary>
+        /// Gets a list of line segments which run across the given r theta pair
+        /// </summary>
+        /// <param name="inputImage"> single channel (byte) image</param>
+        /// <param name="rThetaPair"> the r theta pair depicting the line</param>
+        /// <param name="minIntensityThreshold"> the minimum edge intensity for a pixel to be counted as on</param>
+        /// <param name="minLineLenght"> the minimum length for a line to be considered a line segment</param>
+        /// <param name="maxLineGap"> the maximum gap in the line</param>
+        /// <returns>a list of start/end (x,y) coordinates</returns>
+        private List<Tuple<Point, Point>> houghLineDetection(
+            byte[,] inputImage,
+            Point rThetaPair,
+            byte minIntensityThreshold,
+            int minLineLenght,
+            int maxLineGap)
+        {
+            // Create the list of line segments
+            List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
+
+            // Extract the r and theta values
+            int inputR = rThetaPair.X;
+            int inputTheta = rThetaPair.Y;
+
+            // Create the variables for in the loop
+            int curLineLength = 0;
+            int curLineGap = 0;
+            Point startPoint = Point.Empty;
+            Point endPoint = Point.Empty;
+            bool startNewLine = true;
+
+            // Loop over the input image
+            for (int y = 0; y < inputImage.GetLength(1); y++)
+            for (int x = 0; x < inputImage.GetLength(0); x++)
+            {
+                // If the current pixel is not on the given line, continue to the next pixel
+                if (!coordIsOnLine(x, y)) continue;
+
+                if (inputImageAtCoordIsOn(x, y))
+                {
+                    // Check if a new line needs to be made
+                    if (startNewLine)
+                    {
+                        // Set this point to be the starting point of this line segment
+                        startPoint = new Point(x, y);
+
+                        // Let the program know a new line has been started
+                        startNewLine = false;
+
+                        // Set the current line length to 1, which it should always be at this point in the operation
+                        curLineLength = 1;
+                    }
+                    else // Already working on a line
+                    {
+                        // increment the line length
+                        curLineLength += 1;
+                        
+                        // Add the current line gap to the current line
+                        // If there was a gap, this needs to be accounted for in the line length
+                        curLineLength += curLineGap;
+
+                        // Reset the current line gap variable
+                        curLineGap = 0;
+                        
+                        // Store the current point as the endpoint of the line
+                        endPoint = new Point(x, y);
+                    }
+                }
+                else // There is no acceptable value at this xy coord
+                {
+                    // Increment the line gap
+                    curLineGap += 1;
+                    
+                    // If the current gap exceeds the maximum line gap, check if a complete segment has been made
+                    if (curLineGap > maxLineGap)
+                    {
+                        // If the current line length is equal to or above the minimum length, store this segment and continue to the next 
+                        if (curLineLength >= minLineLenght)
+                        {
+                            // Check if the starting point has been defined
+                            if (startPoint == Point.Empty || endPoint == Point.Empty)
+                                throw new Exception($"houghLineDetection, Something went wrong at {x}, {y}");
+
+                            // Add this line segment to the list
+                            lineSegmentList.Add(new Tuple<Point, Point>(startPoint, endPoint));
+                        }
+
+                        // Let the program know that a new line needs to be started
+                        startNewLine = true;
+                        curLineLength = 0;
+                        curLineGap = 0;
+                    }
+                }
+            }
+
+            // Return the list of line segments
+            return lineSegmentList;
+
+            // Check if the given coordinate is on the given line, with a set tolerance of 0.1
+            bool coordIsOnLine(int x, int y)
+            {
+                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180) + y * Math.Sin(Math.PI * inputTheta / 180))) < 0.1;
+            }
+
+            // Check if there is a value on this xy coord, or if the value is above the threshold
+            bool inputImageAtCoordIsOn(int x, int y)
+            {
+                return inputImage[x, y] >= minIntensityThreshold;
+            }
+        }
+        
+        /// <summary>
+        /// Gets a list of line segments which run across the given r theta pair
+        /// </summary>
+        /// <param name="inputImage"> binary image</param>
+        /// <param name="rThetaPair"> the r theta pair depicting the line</param>
+        /// <param name="minLineLenght"> the minimum length for a line to be considered a line segment</param>
+        /// <param name="maxLineGap"> the maximum gap in the line</param>
+        /// <returns>a list of start/end (x,y) coordinates</returns>
+        private List<Tuple<Point, Point>> houghLineDetection(
+            BinaryImage inputImage, 
+            Point rThetaPair,
+            int minLineLenght, 
+            int maxLineGap)
+        {
+            // Create the list of line segments
+            List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
+
+            // Extract the r and theta values
+            int inputR = rThetaPair.X;
+            int inputTheta = rThetaPair.Y;
+
+            // Create the variables for in the loop
+            int curLineLength = 0;
+            int curLineGap = 0;
+            Point startPoint = Point.Empty;
+            Point endPoint = Point.Empty;
+            bool startNewLine = true;
+
+            // Loop over the input image
+            for (int y = 0; y < inputImage.YSize; y++)
+            for (int x = 0; x < inputImage.XSize; x++)
+            {
+                // If the current pixel is not on the given line, continue to the next pixel
+                if (!coordIsOnLine(x, y)) continue;
+
+                if (inputImageAtCoordIsOn(x, y))
+                {
+                    // Check if a new line needs to be made
+                    if (startNewLine)
+                    {
+                        // Set this point to be the starting point of this line segment
+                        startPoint = new Point(x, y);
+
+                        // Let the program know a new line has been started
+                        startNewLine = false;
+
+                        // Set the current line length to 1, which it should always be at this point in the operation
+                        curLineLength = 1;
+                    }
+                    else // Already working on a line
+                    {
+                        // increment the line length
+                        curLineLength += 1;
+                        
+                        // Add the current line gap to the current line
+                        // If there was a gap, this needs to be accounted for in the line length
+                        curLineLength += curLineGap;
+
+                        // Reset the current line gap variable
+                        curLineGap = 0;
+                        
+                        // Store the current point as the endpoint of the line
+                        endPoint = new Point(x, y);
+                    }
+                }
+                else // There is no acceptable value at this xy coord
+                {
+                    // Increment the line gap
+                    curLineGap += 1;
+                    
+                    // If the current gap exceeds the maximum line gap, check if a complete segment has been made
+                    if (curLineGap > maxLineGap)
+                    {
+                        // If the current line length is equal to or above the minimum length, store this segment and continue to the next 
+                        if (curLineLength >= minLineLenght)
+                        {
+                            // Check if the starting point has been defined
+                            if (startPoint == Point.Empty || endPoint == Point.Empty)
+                                throw new Exception($"houghLineDetection, Something went wrong at {x}, {y}");
+
+                            // Add this line segment to the list
+                            lineSegmentList.Add(new Tuple<Point, Point>(startPoint, endPoint));
+                        }
+
+                        // Let the program know that a new line needs to be started
+                        startNewLine = true;
+                        curLineLength = 0;
+                        curLineGap = 0;
+                    }
+                }
+            }
+
+            // Return the list of line segments
+            return lineSegmentList;
+
+            // Check if the given coordinate is on the given line, with a set tolerance of 0.1
+            bool coordIsOnLine(int x, int y)
+            {
+                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180) + y * Math.Sin(Math.PI * inputTheta / 180))) < 0.1;
+            }
+            
+            // Check if there is a value on this xy coord, or if the value is above the threshold
+            bool inputImageAtCoordIsOn(int x, int y)
+            {
+                return inputImage.GetPixelBool(x, y);
+            }
+        }
     }
 }
