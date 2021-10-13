@@ -109,6 +109,23 @@ namespace INFOIBV
 
             _image[x, y] = val;
         }
+        
+        /// <summary>
+        /// Fill the given pixel with the given boolean value in the binary image
+        /// </summary>
+        /// <param name="x">The x coord of the pixel</param>
+        /// <param name="y">The y coord of the pixel</param>
+        /// <param name="val">The value of the pixel</param>
+        public void Fill(int x, int y, bool val)
+        {
+            if (x >= XSize)
+                throw new ArgumentException("BinaryImage.Fill was given a x out of range");
+            
+            if (y >= YSize)
+                throw new ArgumentException("BinaryImage.Fill was given a y out of range");
+
+            _image[x, y] = (byte) (val ? 255 : 0);
+        }
 
         /// <summary>
         /// Replace the stored binary image with the given image

@@ -160,7 +160,17 @@ namespace INFOIBV
             workingImage = houghTranform(new BinaryImage(workingImage));
             workingImage = thresholdImage(workingImage, 3);
 
-            workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
+            List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
+            Point start = new Point(0, 0);
+            Point end = new Point(10, 10);
+            Tuple<Point, Point> testTuple = new Tuple<Point, Point>(start, end);
+            lineSegmentList.Add(testTuple);
+            start = new Point(11, 2);
+            end = new Point(5, 15);
+            testTuple = new Tuple<Point, Point>(start, end);
+            lineSegmentList.Add(testTuple);
+            
+            workingImage = visualiseHoughLineSegments(workingImage, lineSegmentList);
             
             //workingImage = thresholdImage(workingImage, 60);
 
@@ -2068,5 +2078,113 @@ namespace INFOIBV
                 return inputImage.GetPixelBool(x, y);
             }
         }
+        
+        /// <summary>
+        /// Plots a line in the given binary image
+        /// Adapted from pseudo-code found at: https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm#All_cases
+        /// </summary>
+        /// <param name="inputImage"> The binary image in which the line should be plotted</param>
+        /// <param name="x0">The X coordinate of the start point</param>
+        /// <param name="y0">The Y coordinate of the start point</param>
+        /// <param name="x1">The X coordinate of the end point</param>
+        /// <param name="y1">The Y coordinate of the end point</param>
+        /// <returns>A binary image with the line plotted in</returns>
+        private BinaryImage plotLineBresenham(BinaryImage inputImage, int x0, int y0, int x1, int y1)
+        {
+            int dx = Math.Abs(x1 - x0);
+            int sx = x0 < x1 ? 1 : -1;
+            int dy = - Math.Abs(y1 - y0); 
+            int sy = y0 < y1 ? 1 : -1;
+            int err = dx + dy;
+            int e2;
+            while (true) 
+            {
+                inputImage.Fill(x0, y0, true);
+                if (x0 == x1 && y0 == y1) 
+                    break;
+                e2 = 2 * err;
+                if (e2 >= dy)
+                {
+                    err += dy; 
+                    x0 += sx;
+                }
+                if (e2 <= dx)
+                {
+                    err += dx; 
+                    y0 += sy;
+                }
+            }
+            return inputImage;
+        }
+
+        /// <summary>
+        /// Superimpose the given line segments on the given input image
+        /// </summary>
+        /// <param name="inputImage">a binary image</param>
+        /// <param name="lineSegmentList">the list of line segments</param>
+        /// <returns>a binary image</returns>
+        private BinaryImage visualiseHoughLineSegments(BinaryImage inputImage, List<Tuple<Point, Point>> lineSegmentList)
+        {
+            // Create a binary image to store all the lines
+            BinaryImage lineImage = new BinaryImage(inputImage.XSize, inputImage.YSize);
+
+            // Iterate over all the line segments
+            foreach (var lineSegment in lineSegmentList)
+            {
+                // Extract the points from the tuple
+                int x0 = lineSegment.Item1.X;
+                int y0 = lineSegment.Item1.Y;
+                int x1 = lineSegment.Item2.X;
+                int y1 = lineSegment.Item2.Y;
+
+                // Plot the line in the line image
+                lineImage = plotLineBresenham(lineImage, x0, y0, x1, y1);
+            }
+            
+            // Take the OR of the input image and the line image, so the line image is superimposed on the input image
+            return inputImage.OR(lineImage);
+        }
+        
+        /// <summary>
+        /// Superimpose the given line segments on the given input image
+        /// </summary>
+        /// <param name="inputImage">single chanel (byte) image </param>
+        /// <param name="lineSegmentList">the list of line segments</param>
+        /// <returns>single chanel (byte) image</returns>
+        private byte[,] visualiseHoughLineSegments(byte[,] inputImage, List<Tuple<Point, Point>> lineSegmentList)
+        {
+            // Create a temporary output image, which is a copy of the input image
+            byte[,] outputImage = inputImage;
+
+            // Create a binary image to store all the lines
+            BinaryImage lineImage = new BinaryImage(inputImage.GetLength(0), inputImage.GetLength(1));
+
+            // Iterate over all the line segments
+            foreach (var lineSegment in lineSegmentList)
+            {
+                // Extract the points from the tuple
+                int x0 = lineSegment.Item1.X;
+                int y0 = lineSegment.Item1.Y;
+                int x1 = lineSegment.Item2.X;
+                int y1 = lineSegment.Item2.Y;
+
+                // Plot the line in the line image
+                lineImage = plotLineBresenham(lineImage, x0, y0, x1, y1);
+            }
+            
+            // Iterate over the output image
+            for (int y = 0; y < outputImage.GetLength(0); y++)
+            for (int x = 0; x < outputImage.GetLength(1); x++)
+            {
+                // If the line image holds a value (and thus a pixel in a line) at the current coordinate, set the value to 255
+                if (lineImage.GetPixelBool(x, y))
+                {
+                    outputImage[x, y] = 255;
+                }
+            }
+            
+            return outputImage;
+        } 
+        
     }
 }
