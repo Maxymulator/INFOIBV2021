@@ -1050,7 +1050,7 @@ namespace INFOIBV
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 2 GO HERE ==============
         // ====================================================================
-
+        #region Assignment 2
         private enum StructuringElementShape
         {
             Square,
@@ -1698,6 +1698,8 @@ namespace INFOIBV
 
             return true;
         }
+        #endregion
+        
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
