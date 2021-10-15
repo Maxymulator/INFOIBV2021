@@ -155,24 +155,15 @@ namespace INFOIBV
             countValues(workingImage);
             workingImage = thresholdImage(workingImage, 100);
             List<Point> centers = peakFinding(new BinaryImage(workingImage));
-            //List<Tuple<Point,Point>> line = houghLineDetection(new BinaryImage(workingImage), centers[0], 1, 3);
+            List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
+            foreach (var center in centers)
+            {
+                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 1, 3));
+            }
+            workingImage = visualiseHoughLineSegments(workingImage, line);
 
-            workingImage = houghTranform(new BinaryImage(workingImage));
-            workingImage = thresholdImage(workingImage, 3);
-
-            List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
-            Point start = new Point(0, 0);
-            Point end = new Point(10, 10);
-            Tuple<Point, Point> testTuple = new Tuple<Point, Point>(start, end);
-            lineSegmentList.Add(testTuple);
-            start = new Point(11, 2);
-            end = new Point(5, 15);
-            testTuple = new Tuple<Point, Point>(start, end);
-            lineSegmentList.Add(testTuple);
-            
-            workingImage = visualiseHoughLineSegments(workingImage, lineSegmentList);
-            
             //workingImage = thresholdImage(workingImage, 60);
+
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -1759,7 +1750,7 @@ namespace INFOIBV
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
             byte[,] imageByte = houghTranform(inputImage);
             //remove all unecessary data
-            BinaryImage image = new BinaryImage(thresholdImage(imageByte, 3));
+            BinaryImage image = new BinaryImage(thresholdImage(imageByte, 10));
             //close image
             image = new BinaryImage(closeImage(image.GetImage(), createStructuringElement(StructuringElementShape.Square, 3)));
 
