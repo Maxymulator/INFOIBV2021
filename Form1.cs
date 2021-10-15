@@ -159,45 +159,53 @@ namespace INFOIBV
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 50, 10));
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 50, 10));
             }
             //workingImage = visualiseHoughLineSegments(workingImage, line);
             //workingImage = houghTranform(new BinaryImage(workingImage));
             //workingImage = thresholdImage(workingImage, 80);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 7));
-            
+
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
             OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1));
             // copy array to output Bitmap
-            int count = 0;
+            for (int x = 0; x < workingImage.GetLength(0); x++) // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++) // loop over rows
+                {
+                    if (OutputImage.GetPixel(x, y) != Color.FromArgb(255, 0, 0))
+                    {
+                        Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                        OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
+                    }
+                }
+            OutputImage = drawFoundLines(OutputImage, centers);
+            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
+            pictureBox2.Image = OutputImage; // display output image
+        }
+        private Bitmap drawFoundLines(Bitmap image, List<Point> centers)
+        {
             foreach (var center in centers)
             {
-                for (int x = 0; x < workingImage.GetLength(0); x++) // loop over columns
-                    for (int y = 0; y < workingImage.GetLength(1); y++) // loop over rows
+                for (int x = 0; x < image.Width; x++) // loop over columns
+                    for (int y = 0; y < image.Height; y++) // loop over rows
                     {
-                        if (OutputImage.GetPixel(x,y) != Color.FromArgb(255, 0, 0))
+
+                        if (coordIsOnLine(x, y, center.X, center.Y))
                         {
-                            Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
-                            if (coordIsOnLine(x, y, center.X, center.Y))
-                            {
-                               newColor = Color.FromArgb(255, 0, 0);
-                            }
-                            OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
+                            OutputImage.SetPixel(x, y, Color.Red);
                         }
+                        // set the pixel color at coordinate (x,y)
                     }
             }
-
-            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
-
-            pictureBox2.Image = OutputImage; // display output image
+            return OutputImage;
         }
         // Check if the given coordinate is on the given line, with a set tolerance of 0.1
         private bool coordIsOnLine(int x, int y, double theta, double r)
         {
-            return Math.Abs(r - (x * Math.Cos(Math.PI * (theta/4) / 180) + y * Math.Sin(Math.PI * (theta/4) / 180))) < 2;
+            return Math.Abs(r - (x * Math.Cos(Math.PI * (theta / 4) / 180) + y * Math.Sin(Math.PI * (theta / 4) / 180))) < 0.5;
         }
         /*
          * button_GetLargest_Click: process when user clicks Get Largest Object button
@@ -1726,7 +1734,7 @@ namespace INFOIBV
             return true;
         }
         #endregion
-        
+
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
@@ -1739,7 +1747,7 @@ namespace INFOIBV
         private byte[,] houghTranform(BinaryImage inputImage)
         {
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
-            byte[,] paramSpaceArray = new byte[180*4, maxDistance * 2 + 1];
+            byte[,] paramSpaceArray = new byte[180 * 4, maxDistance * 2 + 1];
             for (int y = 0; y < inputImage.YSize; y++)
                 for (int x = 0; x < inputImage.XSize; x++)
                 {
@@ -1755,7 +1763,7 @@ namespace INFOIBV
                 for (double i = 0; i < 180; i += 0.25)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d);
-                    paramSpaceArray[(int)(i*4d), (int)r + maxDistance] += (paramSpaceArray[(int)(i*4d), (int)r + maxDistance] == (byte) 255) ? (byte)0 : (byte)1;
+                    paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += (paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
                 }
             }
         }
@@ -1789,7 +1797,7 @@ namespace INFOIBV
                 }
             }
         }
-        
+
         /// <summary>
         /// finds peaks in a hough transform image
         /// </summary>
@@ -1811,7 +1819,7 @@ namespace INFOIBV
             {
                 for (int x = 0; x < image.XSize; x++)
                 {
-                    if (image.GetPixelBool(x,y) && !foundPixels[x,y])
+                    if (image.GetPixelBool(x, y) && !foundPixels[x, y])
                     {
                         regions.Add(bfs(x, y));
                     }
@@ -1863,7 +1871,7 @@ namespace INFOIBV
                     foreach (Point neighbour in neighbours)
                     {
                         //check if in image range and not visted and pixel is filled.
-                        if (neighbour.X >=0 && neighbour.X < image.XSize && neighbour.Y >= 0 && neighbour.Y < image.YSize &&
+                        if (neighbour.X >= 0 && neighbour.X < image.XSize && neighbour.Y >= 0 && neighbour.Y < image.YSize &&
                             !Visited[neighbour.X, neighbour.Y] && image.GetPixelBool(neighbour.X, neighbour.Y))
                         {
                             queue.Enqueue(neighbour);
@@ -1933,60 +1941,60 @@ namespace INFOIBV
 
             // Loop over the input image
             for (int y = 0; y < inputImage.GetLength(1); y++)
-            for (int x = 0; x < inputImage.GetLength(0); x++)
-            {
-                // If the current pixel is not on the given line, continue to the next pixel
-                if (!coordIsOnLine(x, y)) continue;
-
-                if (inputImageAtCoordIsOn(x, y))
+                for (int x = 0; x < inputImage.GetLength(0); x++)
                 {
-                    // Check if a new line needs to be made
-                    if (startNewLine)
+                    // If the current pixel is not on the given line, continue to the next pixel
+                    if (!coordIsOnLine(x, y)) continue;
+
+                    if (inputImageAtCoordIsOn(x, y))
                     {
-                        // Set this point to be the starting point of this line segment
-                        startPoint = new Point(x, y);
+                        // Check if a new line needs to be made
+                        if (startNewLine)
+                        {
+                            // Set this point to be the starting point of this line segment
+                            startPoint = new Point(x, y);
 
-                        // Let the program know a new line has been started
-                        startNewLine = false;
+                            // Let the program know a new line has been started
+                            startNewLine = false;
 
-                        // Set the current line length to 1, which it should always be at this point in the operation
-                        curLineLength = 1;
+                            // Set the current line length to 1, which it should always be at this point in the operation
+                            curLineLength = 1;
+                        }
+                        else // Already working on a line
+                        {
+                            // increment the line length
+                            curLineLength += 1;
+
+                            // Add the current line gap to the current line
+                            // If there was a gap, this needs to be accounted for in the line length
+                            curLineLength += curLineGap;
+
+                            // Reset the current line gap variable
+                            curLineGap = 0;
+
+                            // Store the current point as the endpoint of the line
+                            endPoint = new Point(x, y);
+                        }
                     }
-                    else // Already working on a line
+                    else // There is no acceptable value at this xy coord
                     {
-                        // increment the line length
-                        curLineLength += 1;
-                        
-                        // Add the current line gap to the current line
-                        // If there was a gap, this needs to be accounted for in the line length
-                        curLineLength += curLineGap;
+                        // Increment the line gap
+                        curLineGap += 1;
 
-                        // Reset the current line gap variable
-                        curLineGap = 0;
-                        
-                        // Store the current point as the endpoint of the line
-                        endPoint = new Point(x, y);
+                        // If the current gap exceeds the maximum line gap, check if a complete segment has been made
+                        if (curLineGap > maxLineGap)
+                        {
+                            // Check if the line is sufficient and add it to the list if needed
+                            checkIfLineAndAddToList();
+
+                            // Let the program know that a new line needs to be started
+                            startNewLine = true;
+                            curLineLength = 0;
+                            curLineGap = 0;
+                        }
                     }
                 }
-                else // There is no acceptable value at this xy coord
-                {
-                    // Increment the line gap
-                    curLineGap += 1;
-                    
-                    // If the current gap exceeds the maximum line gap, check if a complete segment has been made
-                    if (curLineGap > maxLineGap)
-                    {
-                        // Check if the line is sufficient and add it to the list if needed
-                        checkIfLineAndAddToList();
 
-                        // Let the program know that a new line needs to be started
-                        startNewLine = true;
-                        curLineLength = 0;
-                        curLineGap = 0;
-                    }
-                }
-            }
-            
             // Check the final line
             checkIfLineAndAddToList();
 
@@ -2020,7 +2028,7 @@ namespace INFOIBV
                 }
             }
         }
-        
+
         /// <summary>
         /// Gets a list of line segments which run across the given r theta pair
         /// </summary>
@@ -2030,9 +2038,9 @@ namespace INFOIBV
         /// <param name="maxLineGap"> the maximum gap in the line</param>
         /// <returns>a list of start/end (x,y) coordinates</returns>
         private List<Tuple<Point, Point>> houghLineDetection(
-            BinaryImage inputImage, 
+            BinaryImage inputImage,
             Point rThetaPair,
-            int minLineLenght, 
+            int minLineLenght,
             int maxLineGap)
         {
             // Create the list of line segments
@@ -2051,60 +2059,60 @@ namespace INFOIBV
 
             // Loop over the input image
             for (int y = 0; y < inputImage.YSize; y++)
-            for (int x = 0; x < inputImage.XSize; x++)
-            {
-                // If the current pixel is not on the given line, continue to the next pixel
-                if (!coordIsOnLine(x, y)) continue;
-
-                if (inputImageAtCoordIsOn(x, y))
+                for (int x = 0; x < inputImage.XSize; x++)
                 {
-                    // Check if a new line needs to be made
-                    if (startNewLine)
+                    // If the current pixel is not on the given line, continue to the next pixel
+                    if (!coordIsOnLine(x, y)) continue;
+
+                    if (inputImageAtCoordIsOn(x, y))
                     {
-                        // Set this point to be the starting point of this line segment
-                        startPoint = new Point(x, y);
+                        // Check if a new line needs to be made
+                        if (startNewLine)
+                        {
+                            // Set this point to be the starting point of this line segment
+                            startPoint = new Point(x, y);
 
-                        // Let the program know a new line has been started
-                        startNewLine = false;
+                            // Let the program know a new line has been started
+                            startNewLine = false;
 
-                        // Set the current line length to 1, which it should always be at this point in the operation
-                        curLineLength = 1;
+                            // Set the current line length to 1, which it should always be at this point in the operation
+                            curLineLength = 1;
+                        }
+                        else // Already working on a line
+                        {
+                            // increment the line length
+                            curLineLength += 1;
+
+                            // Add the current line gap to the current line
+                            // If there was a gap, this needs to be accounted for in the line length
+                            curLineLength += curLineGap;
+
+                            // Reset the current line gap variable
+                            curLineGap = 0;
+
+                            // Store the current point as the endpoint of the line
+                            endPoint = new Point(x, y);
+                        }
                     }
-                    else // Already working on a line
+                    else // There is no acceptable value at this xy coord
                     {
-                        // increment the line length
-                        curLineLength += 1;
-                        
-                        // Add the current line gap to the current line
-                        // If there was a gap, this needs to be accounted for in the line length
-                        curLineLength += curLineGap;
+                        // Increment the line gap
+                        curLineGap += 1;
 
-                        // Reset the current line gap variable
-                        curLineGap = 0;
-                        
-                        // Store the current point as the endpoint of the line
-                        endPoint = new Point(x, y);
+                        // If the current gap exceeds the maximum line gap, check if a complete segment has been made
+                        if (curLineGap > maxLineGap)
+                        {
+                            // Check if the line is sufficient and add it to the list if needed
+                            checkIfLineAndAddToList();
+
+                            // Let the program know that a new line needs to be started
+                            startNewLine = true;
+                            curLineLength = 0;
+                            curLineGap = 0;
+                        }
                     }
                 }
-                else // There is no acceptable value at this xy coord
-                {
-                    // Increment the line gap
-                    curLineGap += 1;
-                    
-                    // If the current gap exceeds the maximum line gap, check if a complete segment has been made
-                    if (curLineGap > maxLineGap)
-                    {
-                        // Check if the line is sufficient and add it to the list if needed
-                        checkIfLineAndAddToList();
 
-                        // Let the program know that a new line needs to be started
-                        startNewLine = true;
-                        curLineLength = 0;
-                        curLineGap = 0;
-                    }
-                }
-            }
-            
             // Check the final line
             checkIfLineAndAddToList();
 
@@ -2116,13 +2124,13 @@ namespace INFOIBV
             {
                 return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180) + y * Math.Sin(Math.PI * inputTheta / 180))) < 2;
             }
-            
+
             // Check if there is a value on this xy coord, or if the value is above the threshold
             bool inputImageAtCoordIsOn(int x, int y)
             {
                 return inputImage.GetPixelBool(x, y);
             }
-            
+
             // Checks if the current line is long enough to be added to the output and adds it if so
             void checkIfLineAndAddToList()
             {
@@ -2138,7 +2146,7 @@ namespace INFOIBV
                 }
             }
         }
-        
+
         /// <summary>
         /// Plots a line in the given binary image, using Bresenham's line algorithm
         /// </summary>
@@ -2151,26 +2159,26 @@ namespace INFOIBV
             // Initiate the needed variables
             int xDelta = Math.Abs(endPoint.X - startPoint.X);
             int xSigma = startPoint.X < endPoint.X ? 1 : -1;
-            int yDelta = - Math.Abs(endPoint.Y - startPoint.Y); 
+            int yDelta = -Math.Abs(endPoint.Y - startPoint.Y);
             int ySigma = startPoint.Y < endPoint.Y ? 1 : -1;
             int errorMargin = xDelta + yDelta;
-            
+
             // Iterate until we reach the end point
-            while (startPoint.X != endPoint.X && startPoint.Y != endPoint.Y) 
+            while (startPoint.X != endPoint.X && startPoint.Y != endPoint.Y)
             {
                 // Turn the current pixel on in the input image
                 inputImage.Fill(startPoint.X, startPoint.Y, true);
-                
+
                 // Calculate the next x,y coordinates which are on this line
                 var localErrorMargin = 2 * errorMargin;
                 if (localErrorMargin >= yDelta)
                 {
-                    errorMargin += yDelta; 
+                    errorMargin += yDelta;
                     startPoint.X += xSigma;
                 }
                 if (localErrorMargin <= xDelta)
                 {
-                    errorMargin += xDelta; 
+                    errorMargin += xDelta;
                     startPoint.Y += ySigma;
                 }
             }
@@ -2194,11 +2202,11 @@ namespace INFOIBV
                 // Plot the line in the line image
                 lineImage = plotLineBresenham(lineImage, lineSegment.Item1, lineSegment.Item2);
             }
-            
+
             // Take the OR of the input image and the line image, so the line image is superimposed on the input image
             return inputImage.OR(lineImage);
         }
-        
+
         /// <summary>
         /// Superimpose the given line segments on the given input image
         /// </summary>
@@ -2219,21 +2227,21 @@ namespace INFOIBV
                 // Plot the line in the line image
                 lineImage = plotLineBresenham(lineImage, lineSegment.Item1, lineSegment.Item2);
             }
-            
+
             // Iterate over the output image
             for (int y = 0; y < outputImage.GetLength(1); y++)
-            for (int x = 0; x < outputImage.GetLength(0); x++)
-            {
-                // If the line image holds a value (and thus a pixel in a line) at the current coordinate, set the value to 255
-                if (lineImage.GetPixelBool(x, y))
+                for (int x = 0; x < outputImage.GetLength(0); x++)
                 {
-                    outputImage[x, y] = 255;
+                    // If the line image holds a value (and thus a pixel in a line) at the current coordinate, set the value to 255
+                    if (lineImage.GetPixelBool(x, y))
+                    {
+                        outputImage[x, y] = 255;
+                    }
                 }
-            }
-            
+
             return outputImage;
         }
-        
+
         private Bitmap visualiseHoughLineSegmentsColors(Bitmap inputBitmap, byte[,] inputImage, List<Tuple<Point, Point>> lineSegmentList)
         {
             // Create a temporary output image, which is a copy of the input image
@@ -2248,20 +2256,20 @@ namespace INFOIBV
                 // Plot the line in the line image
                 lineImage = plotLineBresenham(lineImage, lineSegment.Item1, lineSegment.Item2);
             }
-            
+
             // Iterate over the output image
             for (int y = 0; y < inputImage.GetLength(1); y++)
-            for (int x = 0; x < inputImage.GetLength(0); x++)
-            {
-                // If the line image holds a value (and thus a pixel in a line) at the current coordinate, set the value to 255
-                if (lineImage.GetPixelBool(x, y))
+                for (int x = 0; x < inputImage.GetLength(0); x++)
                 {
-                    inputBitmap.SetPixel(x, y, Color.Lime); // set the pixel color at coordinate (x,y)
+                    // If the line image holds a value (and thus a pixel in a line) at the current coordinate, set the value to 255
+                    if (lineImage.GetPixelBool(x, y))
+                    {
+                        inputBitmap.SetPixel(x, y, Color.Lime); // set the pixel color at coordinate (x,y)
+                    }
                 }
-            }
-            
+
             return inputBitmap;
         }
-        
+
     }
 }
