@@ -2100,38 +2100,38 @@ namespace INFOIBV
         }
         
         /// <summary>
-        /// Plots a line in the given binary image
-        /// Adapted from pseudo-code found at: https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm#All_cases
+        /// Plots a line in the given binary image, using Bresenham's line algorithm
         /// </summary>
         /// <param name="inputImage"> The binary image in which the line should be plotted</param>
-        /// <param name="x0">The X coordinate of the start point</param>
-        /// <param name="y0">The Y coordinate of the start point</param>
-        /// <param name="x1">The X coordinate of the end point</param>
-        /// <param name="y1">The Y coordinate of the end point</param>
+        /// <param name="startPoint">The start point of the line</param>
+        /// <param name="endPoint">The end point of the line</param>
         /// <returns>A binary image with the line plotted in</returns>
-        private BinaryImage plotLineBresenham(BinaryImage inputImage, int x0, int y0, int x1, int y1)
+        private BinaryImage plotLineBresenham(BinaryImage inputImage, Point startPoint, Point endPoint)
         {
-            int dx = Math.Abs(x1 - x0);
-            int sx = x0 < x1 ? 1 : -1;
-            int dy = - Math.Abs(y1 - y0); 
-            int sy = y0 < y1 ? 1 : -1;
-            int err = dx + dy;
-            int e2;
-            while (true) 
+            // Initiate the needed variables
+            int xDelta = Math.Abs(endPoint.X - startPoint.X);
+            int xSigma = startPoint.X < endPoint.X ? 1 : -1;
+            int yDelta = - Math.Abs(endPoint.Y - startPoint.Y); 
+            int ySigma = startPoint.Y < endPoint.Y ? 1 : -1;
+            int errorMargin = xDelta + yDelta;
+            
+            // Iterate until we reach the end point
+            while (startPoint.X != endPoint.X && startPoint.Y != endPoint.Y) 
             {
-                inputImage.Fill(x0, y0, true);
-                if (x0 == x1 && y0 == y1) 
-                    break;
-                e2 = 2 * err;
-                if (e2 >= dy)
+                // Turn the current pixel on in the input image
+                inputImage.Fill(startPoint.X, startPoint.Y, true);
+                
+                // Calculate the next x,y coordinates which are on this line
+                var localErrorMargin = 2 * errorMargin;
+                if (localErrorMargin >= yDelta)
                 {
-                    err += dy; 
-                    x0 += sx;
+                    errorMargin += yDelta; 
+                    startPoint.X += xSigma;
                 }
-                if (e2 <= dx)
+                if (localErrorMargin <= xDelta)
                 {
-                    err += dx; 
-                    y0 += sy;
+                    errorMargin += xDelta; 
+                    startPoint.Y += ySigma;
                 }
             }
             return inputImage;
@@ -2151,14 +2151,8 @@ namespace INFOIBV
             // Iterate over all the line segments
             foreach (var lineSegment in lineSegmentList)
             {
-                // Extract the points from the tuple
-                int x0 = lineSegment.Item1.X;
-                int y0 = lineSegment.Item1.Y;
-                int x1 = lineSegment.Item2.X;
-                int y1 = lineSegment.Item2.Y;
-
                 // Plot the line in the line image
-                lineImage = plotLineBresenham(lineImage, x0, y0, x1, y1);
+                lineImage = plotLineBresenham(lineImage, lineSegment.Item1, lineSegment.Item2);
             }
             
             // Take the OR of the input image and the line image, so the line image is superimposed on the input image
@@ -2182,14 +2176,8 @@ namespace INFOIBV
             // Iterate over all the line segments
             foreach (var lineSegment in lineSegmentList)
             {
-                // Extract the points from the tuple
-                int x0 = lineSegment.Item1.X;
-                int y0 = lineSegment.Item1.Y;
-                int x1 = lineSegment.Item2.X;
-                int y1 = lineSegment.Item2.Y;
-
                 // Plot the line in the line image
-                lineImage = plotLineBresenham(lineImage, x0, y0, x1, y1);
+                lineImage = plotLineBresenham(lineImage, lineSegment.Item1, lineSegment.Item2);
             }
             
             // Iterate over the output image
