@@ -2004,7 +2004,7 @@ namespace INFOIBV
             // Check if the given coordinate is on the given line, with a set tolerance of 0.1
             bool coordIsOnLine(int x, int y)
             {
-                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180) + y * Math.Sin(Math.PI * inputTheta / 180))) < 0.1;
+                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180d) + y * Math.Sin(Math.PI * inputTheta / 180d))) < 0.5;;
             }
 
             // Check if there is a value on this xy coord, or if the value is above the threshold
@@ -2122,7 +2122,7 @@ namespace INFOIBV
             // Check if the given coordinate is on the given line, with a set tolerance of 0.1
             bool coordIsOnLine(int x, int y)
             {
-                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180) + y * Math.Sin(Math.PI * inputTheta / 180))) < 2;
+                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180d) + y * Math.Sin(Math.PI * inputTheta / 180d))) < 0.5;
             }
 
             // Check if there is a value on this xy coord, or if the value is above the threshold
