@@ -1740,6 +1740,7 @@ namespace INFOIBV
                 }
             }
         }
+        
         /// <summary>
         /// finds peaks in a hough transform image
         /// </summary>
@@ -1767,7 +1768,6 @@ namespace INFOIBV
                     }
                 }
             }
-
 
             //find centers
             List<Point> centers = new List<Point>();
@@ -1872,8 +1872,8 @@ namespace INFOIBV
             List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
 
             // Extract the r and theta values
-            int inputR = rThetaPair.X;
-            int inputTheta = rThetaPair.Y;
+            double inputR = rThetaPair.X;
+            double inputTheta = rThetaPair.Y / 4d;
 
             // Create the variables for in the loop
             int curLineLength = 0;
@@ -1990,8 +1990,8 @@ namespace INFOIBV
             List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
 
             // Extract the r and theta values
-            int inputR = rThetaPair.Y;
-            int inputTheta = rThetaPair.X;
+            double inputR = rThetaPair.Y;
+            double inputTheta = rThetaPair.X / 4d;
 
             // Create the variables for in the loop
             int curLineLength = 0;
