@@ -1195,9 +1195,9 @@ namespace INFOIBV
 
                         // Check if the reference coordinates are out of bounds and add 0 (background) to the valList if they are
                         if (refX < 0 || refX >= xSize)
-                            valList.Add(0);
+                            valList.Add(255);
                         else if (refY < 0 || refY >= ySize)
-                            valList.Add(0);
+                            valList.Add(255);
                         else
                             // Add the value to the valList with respect to the structuring element
                             valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte)255);
@@ -1267,9 +1267,9 @@ namespace INFOIBV
 
                         // Check if the reference coordinates are out of bounds and add 0 (background) to the valList if they are
                         if (refX < 0 || refX >= xSize)
-                            valList.Add(0);
+                            valList.Add(255);
                         else if (refY < 0 || refY >= ySize)
-                            valList.Add(0);
+                            valList.Add(255);
                         else
                             // Add the value to the valList with respect to the structuring element
                             valList.Add(structuringElement[seX, seY] == 255 ? input[refX, refY] : (byte)255);
