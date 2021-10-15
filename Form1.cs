@@ -150,11 +150,37 @@ namespace INFOIBV
             // =================== YOUR FUNCTION CALLS GO HERE ====================
             // Alternatively you can create buttons to invoke certain functionality
             // ====================================================================
+            
+            // convert image to grayscale
+            byte[,] workingImage = convertToGrayscale(Image); 
+            
+            // adjust the contrast
+            workingImage = adjustContrast(workingImage);
 
-            byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
+            // apply median filter
+            workingImage = medianFilterParallel(workingImage, 5);
+
+            // apply edge detection
+            workingImage = edgeMagnitude(workingImage);
+            
+            // apply a threshold
+            workingImage = thresholdImage(workingImage, 150);
+            
+            // apply the hough transform
+            List<Point> centers = peakFinding(new BinaryImage(workingImage), 65);
+            List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
+            foreach (var center in centers)
+            {
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 15, 2));
+            }
+            
+            
+            
+            
+            // edge detection
+            
             //workingImage = invertImage(workingImage);
-            countValues(workingImage);
-            workingImage = invertImage(workingImage);
+            /*
             workingImage = thresholdImage(workingImage, 100);
             List<Point> centers = peakFinding(new BinaryImage(workingImage), 80);
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
@@ -166,7 +192,7 @@ namespace INFOIBV
             workingImage = houghTranform(new BinaryImage(workingImage));
             //workingImage = thresholdImage(workingImage, 80);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 7));
-
+            */
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -183,7 +209,7 @@ namespace INFOIBV
                     }
                 }
             //OutputImage = drawFoundLines(OutputImage, centers);
-            //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
+            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
             pictureBox2.Image = OutputImage; // display output image
         }
         private Bitmap drawFoundLines(Bitmap image, List<Point> centers)
