@@ -1193,7 +1193,7 @@ namespace INFOIBV
                         int refX = x + (seX - seSizeDelta);
                         int refY = y + (seY - seSizeDelta);
 
-                        // Check if the reference coordinates are out of bounds and add 0 (background) to the valList if they are
+                        // Check if the reference coordinates are out of bounds and add 255 (foreground) to the valList if they are
                         if (refX < 0 || refX >= xSize)
                             valList.Add(255);
                         else if (refY < 0 || refY >= ySize)
@@ -1265,7 +1265,7 @@ namespace INFOIBV
                         int refX = x + (seX - seSizeDelta);
                         int refY = y + (seY - seSizeDelta);
 
-                        // Check if the reference coordinates are out of bounds and add 0 (background) to the valList if they are
+                        // Check if the reference coordinates are out of bounds and add 255 (foreground) to the valList if they are
                         if (refX < 0 || refX >= xSize)
                             valList.Add(255);
                         else if (refY < 0 || refY >= ySize)
