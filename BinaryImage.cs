@@ -9,6 +9,9 @@ namespace INFOIBV
         // The stored binary image
         private byte[,] _image;
         
+        // The stored amount of on pixels
+        private int _onCount;
+        
         /// <summary>
         /// The x size of the binary image
         /// </summary>
@@ -18,6 +21,11 @@ namespace INFOIBV
         /// The y size of the binary image
         /// </summary>
         public int YSize { get; }
+        
+        /// <summary>
+        /// The amount of on pixels of the binary image
+        /// </summary>
+        public int OnCount { get => _onCount; }
 
         /// <summary>
         /// Create a new empty binary image
@@ -29,6 +37,7 @@ namespace INFOIBV
             _image = new byte[xSize, ySize];
             XSize = xSize;
             YSize = ySize;
+            _onCount = 0;
         }
 
         /// <summary>
@@ -107,7 +116,24 @@ namespace INFOIBV
             if (!(val == 0 || val == 255))
                 throw new ArgumentException("BinaryImage.Fill was given a value which was not pure black or white");
 
-            _image[x, y] = val;
+            if (val == 255)
+            {
+                if (!GetPixelBool(x, y)) // should be on, was off before
+                {
+                    _image[x, y] = 255;
+                    _onCount += 1;
+                }
+            }
+            else
+            {
+                if (GetPixelBool(x, y)) // should be off, was on before
+                {
+                    _image[x, y] = 0;
+                    _onCount -= 1;
+                }
+            }
+            
+            //_image[x, y] = val;
         }
         
         /// <summary>
@@ -124,7 +150,24 @@ namespace INFOIBV
             if (y >= YSize)
                 throw new ArgumentException("BinaryImage.Fill was given a y out of range");
 
-            _image[x, y] = (byte) (val ? 255 : 0);
+            if (val)
+            {
+                if (!GetPixelBool(x, y)) // should be on, was off before
+                {
+                    _image[x, y] = 255;
+                    _onCount += 1;
+                }
+            }
+            else
+            {
+                if (GetPixelBool(x, y)) // should be off, was on before
+                {
+                    _image[x, y] = 0;
+                    _onCount -= 1;
+                }
+            }
+            
+            //_image[x, y] = (byte) (val ? 255 : 0);
         }
 
         /// <summary>
@@ -151,7 +194,15 @@ namespace INFOIBV
         /// <returns>A bool denoting if the given image is binary</returns>
         private bool IsBinary(byte[,] input)
         {
-            return input.Cast<byte>().All(val => val == 0 || val == 255);
+            //return input.Cast<byte>().All(val => val == 0 || val == 255);
+            foreach (var pixel in input)
+            {
+                if (pixel == 255)
+                    _onCount += 1;
+                else if (pixel != 0)
+                    return false;
+            }
+            return true;
         }
 
         /// <summary>
