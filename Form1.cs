@@ -154,12 +154,13 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
             //workingImage = invertImage(workingImage);
             countValues(workingImage);
+            workingImage = invertImage(workingImage);
             workingImage = thresholdImage(workingImage, 100);
             List<Point> centers = peakFinding(new BinaryImage(workingImage), 80);
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                //line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 1, 3));
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 20, 5));
             }
             //workingImage = visualiseHoughLineSegments(workingImage, line);
             workingImage = houghTranform(new BinaryImage(workingImage));
@@ -181,8 +182,8 @@ namespace INFOIBV
                         OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
                     }
                 }
-            OutputImage = drawFoundLines(OutputImage, centers);
-            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
+            //OutputImage = drawFoundLines(OutputImage, centers);
+            //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
             pictureBox2.Image = OutputImage; // display output image
         }
         private Bitmap drawFoundLines(Bitmap image, List<Point> centers)
@@ -1777,7 +1778,7 @@ namespace INFOIBV
         private byte[,] houghTransformAngleLimits(BinaryImage inputImage, byte lowerBoundary, byte upperBoundary)
         {
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
-            byte[,] paramSpaceArray = new byte[180, maxDistance * 2 + 1];
+            byte[,] paramSpaceArray = new byte[(upperBoundary - lowerBoundary) * 4, maxDistance * 2 + 1];
             for (int y = 0; y < inputImage.YSize; y++)
                 for (int x = 0; x < inputImage.XSize; x++)
                 {
@@ -1790,10 +1791,10 @@ namespace INFOIBV
 
             void applyHough(int x, int y)
             {
-                for (int i = lowerBoundary; i < upperBoundary; i += 5)
+                for (double i = lowerBoundary ; i < upperBoundary; i += 0.25)
                 {
-                    double r = x * Math.Cos(Math.PI * i / 180) + y * Math.Sin(Math.PI * i / 180);
-                    paramSpaceArray[i, (int)r + maxDistance] += (paramSpaceArray[i, (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
+                    double r = x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d);
+                    paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += (paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
                 }
             }
         }
@@ -2122,7 +2123,7 @@ namespace INFOIBV
             // Check if the given coordinate is on the given line, with a set tolerance of 0.1
             bool coordIsOnLine(int x, int y)
             {
-                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180d) + y * Math.Sin(Math.PI * inputTheta / 180d))) < 0.5;
+                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180d) + y * Math.Sin(Math.PI * inputTheta / 180d))) < 1;
             }
 
             // Check if there is a value on this xy coord, or if the value is above the threshold
