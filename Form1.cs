@@ -160,9 +160,9 @@ namespace INFOIBV
             {
                  line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 10, 20));
             }
-            workingImage = visualiseHoughLineSegments(workingImage, line);
+            //workingImage = visualiseHoughLineSegments(workingImage, line);
             //workingImage = houghTranform(new BinaryImage(workingImage));
-            //workingImage = thresholdImage(workingImage, 70);
+            //workingImage = thresholdImage(workingImage, 80);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 7));
             
 
@@ -172,16 +172,30 @@ namespace INFOIBV
             OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1));
             // copy array to output Bitmap
             int count = 0;
-            for (int x = 0; x < workingImage.GetLength(0); x++) // loop over columns
-                for (int y = 0; y < workingImage.GetLength(1); y++) // loop over rows
-                {
-                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
-                    OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
-                }
+            foreach (var center in centers)
+            {
+                for (int x = 0; x < workingImage.GetLength(0); x++) // loop over columns
+                    for (int y = 0; y < workingImage.GetLength(1); y++) // loop over rows
+                    {
+                        if (OutputImage.GetPixel(x,y) != Color.FromArgb(255, 0, 0))
+                        {
+                            Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                            if (coordIsOnLine(x, y, center.X, center.Y))
+                            {
+                               newColor = Color.FromArgb(255, 0, 0);
+                            }
+                            OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
+                        }
+                    }
+            }
 
             pictureBox2.Image = OutputImage; // display output image
         }
-
+        // Check if the given coordinate is on the given line, with a set tolerance of 0.1
+        private bool coordIsOnLine(int x, int y, double theta, double r)
+        {
+            return Math.Abs(r - (x * Math.Cos(Math.PI * (theta/4) / 180) + y * Math.Sin(Math.PI * (theta/4) / 180))) < 2;
+        }
         /*
          * button_GetLargest_Click: process when user clicks Get Largest Object button
          */
@@ -1783,7 +1797,7 @@ namespace INFOIBV
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
             byte[,] imageByte = houghTranform(inputImage);
             //remove all unecessary data
-            BinaryImage image = new BinaryImage(thresholdImage(imageByte, 50));
+            BinaryImage image = new BinaryImage(thresholdImage(imageByte, 80));
             //close image
             image = new BinaryImage(closeImage(image.GetImage(), createStructuringElement(StructuringElementShape.Square, 3)));
 
