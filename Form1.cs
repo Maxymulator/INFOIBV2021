@@ -1936,16 +1936,8 @@ namespace INFOIBV
                     // If the current gap exceeds the maximum line gap, check if a complete segment has been made
                     if (curLineGap > maxLineGap)
                     {
-                        // If the current line length is equal to or above the minimum length, store this segment and continue to the next 
-                        if (curLineLength >= minLineLenght)
-                        {
-                            // Check if the starting point has been defined
-                            if (startPoint == Point.Empty || endPoint == Point.Empty)
-                                throw new Exception($"houghLineDetection, Something went wrong at {x}, {y}");
-
-                            // Add this line segment to the list
-                            lineSegmentList.Add(new Tuple<Point, Point>(startPoint, endPoint));
-                        }
+                        // Check if the line is sufficient and add it to the list if needed
+                        checkIfLineAndAddToList();
 
                         // Let the program know that a new line needs to be started
                         startNewLine = true;
@@ -1954,6 +1946,9 @@ namespace INFOIBV
                     }
                 }
             }
+            
+            // Check the final line
+            checkIfLineAndAddToList();
 
             // Return the list of line segments
             return lineSegmentList;
@@ -1968,6 +1963,21 @@ namespace INFOIBV
             bool inputImageAtCoordIsOn(int x, int y)
             {
                 return inputImage[x, y] >= minIntensityThreshold;
+            }
+
+            // Checks if the current line is long enough to be added to the output and adds it if so
+            void checkIfLineAndAddToList()
+            {
+                // If the current line length is equal to or above the minimum length, store this segment and continue to the next 
+                if (curLineLength >= minLineLenght)
+                {
+                    // Check if the starting point has been defined
+                    if (startPoint == Point.Empty || endPoint == Point.Empty)
+                        throw new Exception($"houghLineDetection, Something went wrong");
+
+                    // Add this line segment to the list
+                    lineSegmentList.Add(new Tuple<Point, Point>(startPoint, endPoint));
+                }
             }
         }
         
@@ -2044,16 +2054,8 @@ namespace INFOIBV
                     // If the current gap exceeds the maximum line gap, check if a complete segment has been made
                     if (curLineGap > maxLineGap)
                     {
-                        // If the current line length is equal to or above the minimum length, store this segment and continue to the next 
-                        if (curLineLength >= minLineLenght)
-                        {
-                            // Check if the starting point has been defined
-                            if (startPoint == Point.Empty || endPoint == Point.Empty)
-                                throw new Exception($"houghLineDetection, Something went wrong at {x}, {y}");
-
-                            // Add this line segment to the list
-                            lineSegmentList.Add(new Tuple<Point, Point>(startPoint, endPoint));
-                        }
+                        // Check if the line is sufficient and add it to the list if needed
+                        checkIfLineAndAddToList();
 
                         // Let the program know that a new line needs to be started
                         startNewLine = true;
@@ -2062,6 +2064,9 @@ namespace INFOIBV
                     }
                 }
             }
+            
+            // Check the final line
+            checkIfLineAndAddToList();
 
             // Return the list of line segments
             return lineSegmentList;
@@ -2076,6 +2081,21 @@ namespace INFOIBV
             bool inputImageAtCoordIsOn(int x, int y)
             {
                 return inputImage.GetPixelBool(x, y);
+            }
+            
+            // Checks if the current line is long enough to be added to the output and adds it if so
+            void checkIfLineAndAddToList()
+            {
+                // If the current line length is equal to or above the minimum length, store this segment and continue to the next 
+                if (curLineLength >= minLineLenght)
+                {
+                    // Check if the starting point has been defined
+                    if (startPoint == Point.Empty || endPoint == Point.Empty)
+                        throw new Exception($"houghLineDetection, Something went wrong");
+
+                    // Add this line segment to the list
+                    lineSegmentList.Add(new Tuple<Point, Point>(startPoint, endPoint));
+                }
             }
         }
         
