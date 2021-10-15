@@ -155,14 +155,14 @@ namespace INFOIBV
             //workingImage = invertImage(workingImage);
             countValues(workingImage);
             workingImage = thresholdImage(workingImage, 100);
-            List<Point> centers = peakFinding(new BinaryImage(workingImage));
+            List<Point> centers = peakFinding(new BinaryImage(workingImage), 80);
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 50, 10));
+                //line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 1, 3));
             }
             //workingImage = visualiseHoughLineSegments(workingImage, line);
-            //workingImage = houghTranform(new BinaryImage(workingImage));
+            workingImage = houghTranform(new BinaryImage(workingImage));
             //workingImage = thresholdImage(workingImage, 80);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 7));
 
@@ -1803,12 +1803,12 @@ namespace INFOIBV
         /// </summary>
         /// <param name="inputImage">binary image</param>
         /// <returns>tuple of r-theta pairs where peaks are found</returns>
-        private List<Point> peakFinding(BinaryImage inputImage)
+        private List<Point> peakFinding(BinaryImage inputImage, byte thresholdValue)
         {
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
             byte[,] imageByte = houghTranform(inputImage);
             //remove all unecessary data
-            BinaryImage image = new BinaryImage(thresholdImage(imageByte, 80));
+            BinaryImage image = new BinaryImage(thresholdImage(imageByte, thresholdValue));
             //close image
             image = new BinaryImage(closeImage(image.GetImage(), createStructuringElement(StructuringElementShape.Square, 3)));
 
