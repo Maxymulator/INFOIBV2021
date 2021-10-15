@@ -158,11 +158,13 @@ namespace INFOIBV
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 1, 3));
+                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 10, 20));
             }
             workingImage = visualiseHoughLineSegments(workingImage, line);
-
-            //workingImage = thresholdImage(workingImage, 60);
+            //workingImage = houghTranform(new BinaryImage(workingImage));
+            //workingImage = thresholdImage(workingImage, 70);
+            //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 7));
+            
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -1720,6 +1722,36 @@ namespace INFOIBV
         private byte[,] houghTranform(BinaryImage inputImage)
         {
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
+            byte[,] paramSpaceArray = new byte[180*4, maxDistance * 2 + 1];
+            for (int y = 0; y < inputImage.YSize; y++)
+                for (int x = 0; x < inputImage.XSize; x++)
+                {
+                    if (inputImage.GetPixelBool(x, y))
+                    {
+                        applyHough(x, y);
+                    }
+                }
+            return paramSpaceArray;
+
+            void applyHough(int x, int y)
+            {
+                for (double i = 0; i < 180; i += 0.25)
+                {
+                    double r = x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d);
+                    paramSpaceArray[(int)(i*4f), (int)r + maxDistance] += (paramSpaceArray[(int)(i*4f), (int)r + maxDistance] == (byte) 255) ? (byte)0 : (byte)1;
+                }
+            }
+        }
+        /// <summary>
+        /// builds a hough transform image out of a binary image with a lower and upper angle boundary
+        /// </summary>
+        /// <param name="inputImage">binary image</param>
+        /// <param name="lowerBoundary">byte minimum angle</param>
+        /// <param name="upperBoundary">byte maximum angle</param>
+        /// <returns>single-channel hough tranform (byte) image</returns>
+        private byte[,] houghTransformAngleLimits(BinaryImage inputImage, byte lowerBoundary, byte upperBoundary)
+        {
+            int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
             byte[,] paramSpaceArray = new byte[180, maxDistance * 2 + 1];
             for (int y = 0; y < inputImage.YSize; y++)
                 for (int x = 0; x < inputImage.XSize; x++)
@@ -1733,10 +1765,10 @@ namespace INFOIBV
 
             void applyHough(int x, int y)
             {
-                for (int i = 0; i < 180; i += 30)
+                for (int i = lowerBoundary; i < upperBoundary; i += 5)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180) + y * Math.Sin(Math.PI * i / 180);
-                    paramSpaceArray[i, (int)r + maxDistance] += (paramSpaceArray[i, (int)r + maxDistance] == (byte) 255) ? (byte)0 : (byte)1;
+                    paramSpaceArray[i, (int)r + maxDistance] += (paramSpaceArray[i, (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
                 }
             }
         }
@@ -1750,7 +1782,7 @@ namespace INFOIBV
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
             byte[,] imageByte = houghTranform(inputImage);
             //remove all unecessary data
-            BinaryImage image = new BinaryImage(thresholdImage(imageByte, 10));
+            BinaryImage image = new BinaryImage(thresholdImage(imageByte, 50));
             //close image
             image = new BinaryImage(closeImage(image.GetImage(), createStructuringElement(StructuringElementShape.Square, 3)));
 
@@ -1782,7 +1814,7 @@ namespace INFOIBV
                     yTotal += point.Y;
                 }
                 //add the avererage point
-                centers.Add(new Point((int)(xTotal / region.Count), (int)(yTotal / region.Count) - maxDistance));
+                centers.Add(new Point((xTotal / region.Count), (int)(yTotal / region.Count) - maxDistance));
             }
             return centers;
 
@@ -2065,7 +2097,7 @@ namespace INFOIBV
             // Check if the given coordinate is on the given line, with a set tolerance of 0.1
             bool coordIsOnLine(int x, int y)
             {
-                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180) + y * Math.Sin(Math.PI * inputTheta / 180))) < 0.1;
+                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180) + y * Math.Sin(Math.PI * inputTheta / 180))) < 2;
             }
             
             // Check if there is a value on this xy coord, or if the value is above the threshold
@@ -2184,8 +2216,8 @@ namespace INFOIBV
             }
             
             // Iterate over the output image
-            for (int y = 0; y < outputImage.GetLength(0); y++)
-            for (int x = 0; x < outputImage.GetLength(1); x++)
+            for (int y = 0; y < outputImage.GetLength(1); y++)
+            for (int x = 0; x < outputImage.GetLength(0); x++)
             {
                 // If the line image holds a value (and thus a pixel in a line) at the current coordinate, set the value to 255
                 if (lineImage.GetPixelBool(x, y))
