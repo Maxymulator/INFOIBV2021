@@ -152,13 +152,14 @@ namespace INFOIBV
             // ====================================================================
 
             byte[,] workingImage = convertToGrayscale(Image); // convert image to grayscale
+            //workingImage = invertImage(workingImage);
             countValues(workingImage);
             workingImage = thresholdImage(workingImage, 100);
             List<Point> centers = peakFinding(new BinaryImage(workingImage));
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 10, 20));
+                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 50, 10));
             }
             //workingImage = visualiseHoughLineSegments(workingImage, line);
             //workingImage = houghTranform(new BinaryImage(workingImage));
@@ -188,6 +189,8 @@ namespace INFOIBV
                         }
                     }
             }
+
+            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
 
             pictureBox2.Image = OutputImage; // display output image
         }
@@ -1752,7 +1755,7 @@ namespace INFOIBV
                 for (double i = 0; i < 180; i += 0.25)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d);
-                    paramSpaceArray[(int)(i*4f), (int)r + maxDistance] += (paramSpaceArray[(int)(i*4f), (int)r + maxDistance] == (byte) 255) ? (byte)0 : (byte)1;
+                    paramSpaceArray[(int)(i*4d), (int)r + maxDistance] += (paramSpaceArray[(int)(i*4d), (int)r + maxDistance] == (byte) 255) ? (byte)0 : (byte)1;
                 }
             }
         }
@@ -2229,7 +2232,36 @@ namespace INFOIBV
             }
             
             return outputImage;
-        } 
+        }
+        
+        private Bitmap visualiseHoughLineSegmentsColors(Bitmap inputBitmap, byte[,] inputImage, List<Tuple<Point, Point>> lineSegmentList)
+        {
+            // Create a temporary output image, which is a copy of the input image
+            //byte[,] outputImage = inputImage;
+
+            // Create a binary image to store all the lines
+            BinaryImage lineImage = new BinaryImage(inputImage.GetLength(0), inputImage.GetLength(1));
+
+            // Iterate over all the line segments
+            foreach (var lineSegment in lineSegmentList)
+            {
+                // Plot the line in the line image
+                lineImage = plotLineBresenham(lineImage, lineSegment.Item1, lineSegment.Item2);
+            }
+            
+            // Iterate over the output image
+            for (int y = 0; y < inputImage.GetLength(1); y++)
+            for (int x = 0; x < inputImage.GetLength(0); x++)
+            {
+                // If the line image holds a value (and thus a pixel in a line) at the current coordinate, set the value to 255
+                if (lineImage.GetPixelBool(x, y))
+                {
+                    inputBitmap.SetPixel(x, y, Color.Lime); // set the pixel color at coordinate (x,y)
+                }
+            }
+            
+            return inputBitmap;
+        }
         
     }
 }
