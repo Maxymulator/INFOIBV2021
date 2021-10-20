@@ -1907,7 +1907,7 @@ namespace INFOIBV
 
             void applyHough(int x, int y)
             {
-                for (double i = lowerBoundary; i < upperBoundary; i += 0.25)
+                for (double i = lowerBoundary; i < upperBoundary; i += 0.25d)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d);
                     paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += (paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
