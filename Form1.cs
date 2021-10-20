@@ -17,10 +17,11 @@ namespace INFOIBV
         // Added so all changes can be made in one place
         private const byte FilterSize = 9;
         private const byte GreyscaleThreshold = 150;
-        private const byte HoughPeakThreshold = 100;
+        private const byte HoughPeakThreshold = 70;
         private const int CrossingThreshold = 1;
-        private const int MinLineLength = 10;
+        private const int MinLineLength = 20;
         private const int MaxLineGap = 2;
+        private const int minimumIntesityThreshold = 100;
         private static readonly Color FullLineColor = Color.Red;
         private static readonly Color LineSegmentColor = Color.Lime;
         private static readonly Color CrossingColor = Color.BlueViolet;
@@ -175,41 +176,14 @@ namespace INFOIBV
             // apply edge detection
             workingImage = edgeMagnitude(workingImage);
 
-            // apply a threshold
-            workingImage = thresholdImage(workingImage, GreyscaleThreshold);
-
-            
-            //workingImage = houghTranformCircle(new BinaryImage(workingImage), 130);
             // apply the hough transform
-            List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
+            List<Point> centers = peakFinding(workingImage, HoughPeakThreshold, GreyscaleThreshold);
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
+                line.AddRange(houghLineDetection(workingImage, center, minimumIntesityThreshold, MinLineLength, MaxLineGap));
             }
 
-            //workingImage = houghTranform(new BinaryImage(workingImage));
-            //workingImage = thresholdImage(workingImage, 150);
-
-
-            // edge detection
-
-            //workingImage = invertImage(workingImage);
-            /*
-            workingImage = thresholdImage(workingImage, 100);
-            List<Point> centers = peakFinding(new BinaryImage(workingImage), 80);
-            List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
-            foreach (var center in centers)
-            {
-                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 20, 5));
-            }
-            //workingImage = visualiseHoughLineSegments(workingImage, line);
-            
-            
-            //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 7));
-            */
-            //workingImage = houghTranformCircle(new BinaryImage(workingImage), 54);
-            //workingImage = thresholdImage(workingImage, 90);
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
             // Create the output bitmap
@@ -1932,8 +1906,30 @@ namespace INFOIBV
             return findCenterPoints(image, maxDistance);
 
         }
+        /// <summary>
+        /// finds peaks in a hough transform image
+        /// </summary>
+        /// <param name="inputImage">binary image</param>
+        /// <returns>tuple of r-theta pairs where peaks are found</returns>
+        private List<Point> peakFinding(byte[,] inputImage, byte thresholdValue, byte greyScaleThreshold)
+        {
+            int maxDistance =
+                (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.GetLength(0), 2) + Math.Pow(inputImage.GetLength(1), 2)));
+            byte[,] imageByte = houghTranform(new BinaryImage(thresholdImage(inputImage, greyScaleThreshold)));
+            //remove all unecessary data
+            BinaryImage image = new BinaryImage(thresholdImage(imageByte, thresholdValue));
+            //close image
+            image = new BinaryImage(closeImage(image.GetImage(),
+                createStructuringElement(StructuringElementShape.Square, 3)));
 
-        //TODO: add summary
+            return findCenterPoints(image, maxDistance);
+
+        }
+        /// <summary>
+        /// finds center points with bfs in a binary image
+        /// </summary>
+        /// <param name="inputImage">binary image</param>
+        /// <returns>list of all the center points</returns>
         private List<Point> findCenterPoints(BinaryImage image, int maxDistance)
         {
             //find regions with BFS
@@ -2584,8 +2580,8 @@ namespace INFOIBV
                 {
                     int refX = crossing.X + (x - (size / 2));
                     int refY = crossing.Y + (y - (size / 2));
-                    refX = Math.Min(Math.Max(refX, 0), inputBitmap.Width);
-                    refY = Math.Min(Math.Max(refY, 0), inputBitmap.Height);
+                    refX = Math.Min(Math.Max(refX, 0), inputBitmap.Width - 1);
+                    refY = Math.Min(Math.Max(refY, 0), inputBitmap.Height - 1);
 
                     inputBitmap.SetPixel(refX, refY, color);
                 }
