@@ -214,48 +214,7 @@ namespace INFOIBV
             //OutputImage = visualiseCrossingsColor(OutputImage, centers);
             pictureBox2.Image = OutputImage; // display output image
         }
-        private Bitmap drawFoundLines(Bitmap image, List<Point> centers)
-        {
-            foreach (var center in centers)
-            {
-                if (center.X/4 >95 || center.X/4 < 80)
-                {
-                    for (int y = 0; y < image.Height; y++) // loop over columns
-                    {
-                        int x = (int)calcLineX(y, center.X, center.Y);
-                        x = Math.Min(Math.Max(x, 0), image.Width-1);
-                        OutputImage.SetPixel(x, y, Color.Red);
-                    }
-                }
-                else
-                {
-                    for (int x = 0; x < image.Width; x++) // loop over columns
-                    {
-                        int y = (int)calcLineY(x, center.X, center.Y);
-                        y = Math.Min(Math.Max(y, 0), image.Height - 1);
-                        OutputImage.SetPixel(x, y, Color.Red);
-                    }
-                }
-                
-                        // set the pixel color at coordinate (x,y)
-            }
-            return OutputImage;
-        }
-        // Check if the given coordinate is on the given line, with a set tolerance of 0.1
-        private double calcLineX(int y, double theta, double r)
-        {
-            theta = theta / 4d;
-            double temp1 = r - ((double)y * Math.Sin(Math.PI * theta / 180d));
-            double x = temp1 / Math.Cos(Math.PI * theta / 180d);
-            return Math.Round(x);
-        }
-        private double calcLineY(int x, double theta, double r)
-        {
-            theta = theta / 4d;
-            double temp1 = r - ((double)x * Math.Cos(Math.PI * theta / 180d));
-            double y = temp1 / Math.Sin(Math.PI * theta / 180d);
-            return Math.Round(y);
-        }
+        
         /*
          * button_GetLargest_Click: process when user clicks Get Largest Object button
          */
@@ -2123,6 +2082,22 @@ namespace INFOIBV
                 }
             }
         }
+        
+        // Check if the given coordinate is on the given line, with a set tolerance of 0.1
+        private double calcLineX(int y, double theta, double r)
+        {
+            theta = theta / 4d;
+            double temp1 = r - ((double)y * Math.Sin(Math.PI * theta / 180d));
+            double x = temp1 / Math.Cos(Math.PI * theta / 180d);
+            return Math.Round(x);
+        }
+        private double calcLineY(int x, double theta, double r)
+        {
+            theta = theta / 4d;
+            double temp1 = r - ((double)x * Math.Cos(Math.PI * theta / 180d));
+            double y = temp1 / Math.Sin(Math.PI * theta / 180d);
+            return Math.Round(y);
+        }
 
         /// <summary>
         /// Gets a list of line segments which run across the given r theta pair
@@ -2133,6 +2108,46 @@ namespace INFOIBV
         /// <param name="maxLineGap"> the maximum gap in the line</param>
         /// <returns>a list of start/end (x,y) coordinates</returns>
         private List<Tuple<Point, Point>> houghLineDetection(
+            BinaryImage inputImage,
+            Point rThetaPair,
+            int minLineLenght,
+            int maxLineGap)
+        {
+            // Create the list of line segments
+            List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
+
+            // Extract the r and theta values
+            double inputR = rThetaPair.Y;
+            double inputTheta = rThetaPair.X / 4d;
+
+            // Create the variables for in the loop
+            int curLineLength = 0;
+            int curLineGap = 0;
+            Point startPoint = Point.Empty;
+            Point endPoint = Point.Empty;
+            bool startNewLine = true;
+            
+            if(inputTheta < 80 || inputTheta > 100)
+                lineDetectXAxis();
+
+            return lineSegmentList;
+            
+            void lineDetectXAxis()
+            {
+                
+            }
+
+        }
+
+        /// <summary>
+        /// Gets a list of line segments which run across the given r theta pair
+        /// </summary>
+        /// <param name="inputImage"> binary image</param>
+        /// <param name="rThetaPair"> the r theta pair depicting the line</param>
+        /// <param name="minLineLenght"> the minimum length for a line to be considered a line segment</param>
+        /// <param name="maxLineGap"> the maximum gap in the line</param>
+        /// <returns>a list of start/end (x,y) coordinates</returns>
+        private List<Tuple<Point, Point>> houghLineDetection2(
             BinaryImage inputImage,
             Point rThetaPair,
             int minLineLenght,
@@ -2362,7 +2377,35 @@ namespace INFOIBV
 
             return inputBitmap;
         }
-
+        
+        private Bitmap drawFoundLines(Bitmap image, List<Point> centers)
+        {
+            foreach (var center in centers)
+            {
+                if (center.X/4d > 100 || center.X/4d < 80)
+                {
+                    for (int y = 0; y < image.Height; y++) // loop over columns
+                    {
+                        int x = (int)calcLineX(y, center.X, center.Y);
+                        x = Math.Min(Math.Max(x, 0), image.Width-1);
+                        OutputImage.SetPixel(x, y, Color.Red);
+                    }
+                }
+                else
+                {
+                    for (int x = 0; x < image.Width; x++) // loop over columns
+                    {
+                        int y = (int)calcLineY(x, center.X, center.Y);
+                        y = Math.Min(Math.Max(y, 0), image.Height - 1);
+                        OutputImage.SetPixel(x, y, Color.Red);
+                    }
+                }
+                
+                // set the pixel color at coordinate (x,y)
+            }
+            return OutputImage;
+        }
+        
         private Bitmap visualiseCrossingsColor(Bitmap inputBitmap, List<Point> rThetaPairs)
         {
             List<Point> crossingList = findCrossings(rThetaPairs, inputBitmap.Width, inputBitmap.Height);
