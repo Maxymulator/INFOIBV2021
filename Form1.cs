@@ -15,7 +15,7 @@ namespace INFOIBV
     {
         private Bitmap InputImage;
         private Bitmap OutputImage;
-        private double stepsPerDegrees = 100;
+        private double stepsPerDegrees = 4;
         public INFOIBV()
         {
             InitializeComponent();
@@ -155,16 +155,19 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image);
 
             // adjust the contrast
-            workingImage = adjustContrast(workingImage);
+            //workingImage = adjustContrast(workingImage);
 
             // apply median filter
-            workingImage = medianFilterParallel(workingImage, 5);
+            //workingImage = medianFilterParallel(workingImage, 5);
 
             // apply edge detection
-            workingImage = edgeMagnitude(workingImage);
+            //workingImage = edgeMagnitude(workingImage);
 
             // apply a threshold
             workingImage = thresholdImage(workingImage, 150);
+
+            //inver image
+            //workingImage = invertImage(workingImage);
             
             //workingImage = houghTranformCircle(new BinaryImage(workingImage), 130);
             // apply the hough transform
@@ -172,10 +175,10 @@ namespace INFOIBV
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 20, 1));
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 40, 1));
             }
-            workingImage = houghTranform(new BinaryImage(workingImage));
-            workingImage = thresholdImage(workingImage, 150);
+            //workingImage = houghTranform(new BinaryImage(workingImage));
+            //workingImage = thresholdImage(workingImage, 100);
 
 
             // edge detection
@@ -210,7 +213,7 @@ namespace INFOIBV
                     }
                 }
 
-            //OutputImage = drawFoundLines(OutputImage, centers);
+            OutputImage = drawFoundLines(OutputImage, centers);
             //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
             //OutputImage = visualiseCrossingsColor(OutputImage, centers);
             pictureBox2.Image = OutputImage; // display output image
@@ -956,7 +959,29 @@ namespace INFOIBV
 
             return tempImage;
         }
+        /// <summary>
+        /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
+        /// </summary>
+        /// <param name="inputImage"> single-channel (int) image to threshold</param>
+        /// <param name="thresholdValue"> threshold value </param>
+        /// <returns>single-channel (byte) image</returns>
+        private byte[,] thresholdImage(int[,] inputImage, int thresholdValue)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
+            // iterate over the image pixels and threshold them
+            for (int y = 0; y < tempImage.GetLength(1); y++)
+                for (int x = 0; x < tempImage.GetLength(0); x++)
+                {
+                    if (inputImage[x, y] > thresholdValue)
+                        tempImage[x, y] = 255;
+                    else
+                        tempImage[x, y] = 0;
+                }
+
+            return tempImage;
+        }
         /// <summary>
         /// Parallel.
         /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
@@ -1756,7 +1781,7 @@ namespace INFOIBV
         private byte[,] houghTranform(BinaryImage inputImage)
         {
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
-            byte[,] paramSpaceArray = new byte[180 * (int)stepsPerDegrees, maxDistance * 2 + 1];
+            byte[,] paramSpaceArray = new byte[180 * (int)4d, maxDistance * 2 + 1];
             for (int y = 0; y < inputImage.YSize; y++)
                 for (int x = 0; x < inputImage.XSize; x++)
                 {
@@ -1770,10 +1795,10 @@ namespace INFOIBV
 
             void applyHough(int x, int y)
             {
-                for (double i = 0; i < 180; i += 1/stepsPerDegrees)
+                for (double i = 0; i < 180; i += 0.25d)
                 {
                     double r = Math.Round(x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d));
-                    paramSpaceArray[(int)(i * stepsPerDegrees), (int)r + maxDistance] += (paramSpaceArray[(int)(i * stepsPerDegrees), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
+                    paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += 1;
                 }
             }
         }
@@ -1844,7 +1869,7 @@ namespace INFOIBV
                 for (double i = lowerBoundary; i < upperBoundary; i += 0.25)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d);
-                    paramSpaceArray[(int)(i * stepsPerDegrees), (int)r + maxDistance] += (paramSpaceArray[(int)(i * stepsPerDegrees), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
+                    paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += (paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
                 }
             }
         }
@@ -1983,7 +2008,7 @@ namespace INFOIBV
         /// <param name="r"> The r value of the line</param>
         private double calcLineX(int y, double theta, double r)
         {
-            theta = theta / stepsPerDegrees;
+            theta = theta / 4d;
             double temp1 = r - ((double)y * Math.Sin(Math.PI * theta / 180d));
             double x = temp1 / Math.Cos(Math.PI * theta / 180d);
             return Math.Round(x);
@@ -1997,7 +2022,7 @@ namespace INFOIBV
         /// <param name="r"> The r value of the line</param>
         private double calcLineY(int x, double theta, double r)
         {
-            theta = theta / stepsPerDegrees;
+            theta = theta / 4d;
             double temp1 = r - ((double)x * Math.Cos(Math.PI * theta / 180d));
             double y = temp1 / Math.Sin(Math.PI * theta / 180d);
             return Math.Round(y);
@@ -2436,7 +2461,7 @@ namespace INFOIBV
         {
             foreach (var center in centers)
             {
-                if (center.X / stepsPerDegrees > 100 || center.X / stepsPerDegrees < 80)
+                if (center.X / 4d > 100 || center.X / 4d < 80)
                 {
                     for (int y = 0; y < image.Height; y++) // loop over columns
                     {
@@ -2485,7 +2510,7 @@ namespace INFOIBV
             {
                 // Extract the r and theta values
                 double inputR = rThetaPair.X;
-                double inputTheta = rThetaPair.Y / stepsPerDegrees;
+                double inputTheta = rThetaPair.Y / 4d;
 
                 // Draw the line in the accumulator array
                 drawLineInAccArray(inputR, inputTheta);
