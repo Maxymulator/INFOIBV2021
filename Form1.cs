@@ -15,12 +15,12 @@ namespace INFOIBV
     {
         // Create the global constants for this operation
         // Added so all changes can be made in one place
-        private const byte FilterSize = 5;
+        private const byte FilterSize = 9;
         private const byte GreyscaleThreshold = 150;
-        private const byte HoughPeakThreshold = 7;
+        private const byte HoughPeakThreshold = 100;
         private const int CrossingThreshold = 1;
-        private const int MinLineLength = 2;
-        private const int MaxLineGap = 8;
+        private const int MinLineLength = 10;
+        private const int MaxLineGap = 2;
         private static readonly Color FullLineColor = Color.Red;
         private static readonly Color LineSegmentColor = Color.Lime;
         private static readonly Color CrossingColor = Color.BlueViolet;
@@ -167,19 +167,17 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image);
 
             // adjust the contrast
-            //workingImage = adjustContrast(workingImage);
+            workingImage = adjustContrast(workingImage);
 
             // apply median filter
-            //workingImage = medianFilterParallel(workingImage, FilterSize);
+            workingImage = medianFilterParallel(workingImage, FilterSize);
 
             // apply edge detection
-            //workingImage = edgeMagnitude(workingImage);
+            workingImage = edgeMagnitude(workingImage);
 
             // apply a threshold
             workingImage = thresholdImage(workingImage, GreyscaleThreshold);
 
-            //inver image
-            //workingImage = invertImage(workingImage);
             
             //workingImage = houghTranformCircle(new BinaryImage(workingImage), 130);
             // apply the hough transform
@@ -226,9 +224,9 @@ namespace INFOIBV
             }
 
             // Draw the overlays
-            OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
+            //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
             OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
-            OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
+            //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
 
             // display output image
             pictureBox2.Image = OutputImage;
