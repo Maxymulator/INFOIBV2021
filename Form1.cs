@@ -13,6 +13,19 @@ namespace INFOIBV
 {
     public partial class INFOIBV : Form
     {
+        // Create the global constants for this operation
+        // Added so all changes can be made in one place
+        private const byte FilterSize = 5;
+        private const byte GreyscaleThreshold = 150;
+        private const byte HoughPeakThreshold = 25;
+        private const int MinLineLength = 10;
+        private const int MaxLineGap = 1;
+        private static readonly Color FullLineColor = Color.Red;
+        private static readonly Color LineSegmentColor = Color.Lime;
+        private static readonly Color CrossingColor = Color.BlueViolet;
+        
+
+
         private Bitmap InputImage;
         private Bitmap OutputImage;
 
@@ -158,20 +171,20 @@ namespace INFOIBV
             //workingImage = adjustContrast(workingImage);
 
             // apply median filter
-            //workingImage = medianFilterParallel(workingImage, 5);
+            //workingImage = medianFilterParallel(workingImage, FilterSize);
 
             // apply edge detection
             //workingImage = edgeMagnitude(workingImage);
             
             // apply a threshold
-            workingImage = thresholdImage(workingImage, 150);
+            workingImage = thresholdImage(workingImage, GreyscaleThreshold);
             //workingImage = houghTranformCircle(new BinaryImage(workingImage), 130);
             // apply the hough transform
-            List<Point> centers = peakFinding(new BinaryImage(workingImage), 90);
+            List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 15, 7));
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
             }
 
 
@@ -197,22 +210,24 @@ namespace INFOIBV
             //workingImage = thresholdImage(workingImage, 90);
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
+            // Create the output bitmap
             OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1));
+            
             // copy array to output Bitmap
             for (int x = 0; x < workingImage.GetLength(0); x++) // loop over columns
-                for (int y = 0; y < workingImage.GetLength(1); y++) // loop over rows
-                {
-                    if (OutputImage.GetPixel(x, y) != Color.FromArgb(255, 0, 0))
-                    {
-                        Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
-                        OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
-                    }
-                }
+            for (int y = 0; y < workingImage.GetLength(1); y++) // loop over rows
+            {
+                Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
+            }
+
+            // Draw the overlays
+            OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
+            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
+            OutputImage = visualiseCrossingsColor(OutputImage, 1, 3, centers, CrossingColor);
             
-            OutputImage = drawFoundLines(OutputImage, centers);
-            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
-            //OutputImage = visualiseCrossingsColor(OutputImage, centers);
-            pictureBox2.Image = OutputImage; // display output image
+            // display output image
+            pictureBox2.Image = OutputImage; 
         }
         
         /*
@@ -1859,6 +1874,7 @@ namespace INFOIBV
             
         }
 
+        //TODO: add summary
         private List<Point> findCenterPoints(BinaryImage image, int maxDistance)
         {
             //find regions with BFS
@@ -1891,10 +1907,6 @@ namespace INFOIBV
                 //add the avererage point
                 centers.Add(new Point((xTotal / region.Count), (int) (yTotal / region.Count) - maxDistance));
             }
-            //WEG HALENN TESTTT SKRRTT
-            //centers.Clear();
-            //centers.Add(new Point(720, -4));
-            //centers.Add(new Point(360, 4));
 
             return centers;
 
@@ -2204,6 +2216,8 @@ namespace INFOIBV
                     else // There is no acceptable value at this xy coord
                         applyGapLogic(x, y);
                 }
+                if(!startNewLine)
+                    checkIfLineAndAddToList();
             }
             
             void lineDetectXAxis()
@@ -2223,20 +2237,22 @@ namespace INFOIBV
                     else // There is no acceptable value at this xy coord
                         applyGapLogic(x, y);
                 }
+                if(!startNewLine)
+                    checkIfLineAndAddToList();
             }
 
             bool yAxisInputImageAtCoordIsOn(int x, int y)
             {
                 return inputImage.GetPixelBool(x, y) // check the current pixel
-                       || inputImage.GetPixelBool(x, y != 0 ? y - 1 : y) // check the pixel above
-                       || inputImage.GetPixelBool(x, y != inputImage.YSize - 1 ? y + 1 : y); // check the pixel below
+                       || (inputImage.GetPixelBool(x, y != 0 ? y - 1 : y) && !startNewLine) // check the pixel above
+                       || (inputImage.GetPixelBool(x, y != inputImage.YSize - 1 ? y + 1 : y) && ! startNewLine); // check the pixel below
             }
             
             bool xAxisInputImageAtCoordIsOn(int x, int y)
             {
                 return inputImage.GetPixelBool(x, y) // check the current pixel
-                       || inputImage.GetPixelBool(x != 0 ? x - 1 : x, y) // check the pixel to the left
-                       || inputImage.GetPixelBool(x != inputImage.XSize - 1 ? x + 1 : x, y); // check the pixel to the right
+                       || (inputImage.GetPixelBool(x != 0 ? x - 1 : x, y) && !startNewLine) // check the pixel to the left
+                       || (inputImage.GetPixelBool(x != inputImage.XSize - 1 ? x + 1 : x, y) && !startNewLine); // check the pixel to the right
             }
 
             void applyLineLogic(int x, int y)
@@ -2320,7 +2336,7 @@ namespace INFOIBV
             int errorMargin = xDelta + yDelta;
 
             // Iterate until we reach the end point
-            while (startPoint.X != endPoint.X && startPoint.Y != endPoint.Y)
+            while (!(startPoint.X == endPoint.X && startPoint.Y == endPoint.Y))
             {
                 // Turn the current pixel on in the input image
                 inputImage.Fill(startPoint.X, startPoint.Y, true);
@@ -2398,7 +2414,15 @@ namespace INFOIBV
             return outputImage;
         }
 
-        private Bitmap visualiseHoughLineSegmentsColors(Bitmap inputBitmap, byte[,] inputImage, List<Tuple<Point, Point>> lineSegmentList)
+        /// <summary>
+        /// Superimpose the given line segments on the given input image in the given color
+        /// </summary>
+        /// <param name="inputBitmap"> The input Bitmap</param>
+        /// <param name="inputImage">single chanel (byte) image </param>
+        /// <param name="lineSegmentList">the list of line segments</param>
+        /// <param name="color"> The color to be used</param>
+        /// <returns>single chanel (byte) image</returns>
+        private Bitmap visualiseHoughLineSegmentsColors(Bitmap inputBitmap, byte[,] inputImage, List<Tuple<Point, Point>> lineSegmentList, Color color)
         {
             // Create a binary image to store all the lines
             BinaryImage lineImage = new BinaryImage(inputImage.GetLength(0), inputImage.GetLength(1));
@@ -2417,14 +2441,20 @@ namespace INFOIBV
                     // If the line image holds a value (and thus a pixel in a line) at the current coordinate, set the value to 255
                     if (lineImage.GetPixelBool(x, y))
                     {
-                        inputBitmap.SetPixel(x, y, Color.Lime); // set the pixel color at coordinate (x,y)
+                        inputBitmap.SetPixel(x, y, color); // set the pixel color at coordinate (x,y)
                     }
                 }
 
             return inputBitmap;
         }
         
-        private Bitmap drawFoundLines(Bitmap image, List<Point> centers)
+        /// <summary>
+        /// Draws the lines corresponding to the found r theta pairs to the image
+        /// </summary>
+        /// <param name="image"> The bitmap to draw in</param>
+        /// <param name="centers"> The r theta pairs</param>
+        /// <param name="color"> The color to draw the line in</param>
+        private Bitmap drawFoundLines(Bitmap image, List<Point> centers, Color color)
         {
             foreach (var center in centers)
             {
@@ -2433,8 +2463,12 @@ namespace INFOIBV
                     for (int y = 0; y < image.Height; y++) // loop over columns
                     {
                         int x = (int)calcLineX(y, center.X, center.Y);
-                        x = Math.Min(Math.Max(x, 0), image.Width-1);
-                        OutputImage.SetPixel(x, y, Color.Red);
+                        
+                        // Discard the x and y if the x is outside the image
+                        if (x < 0 || x >= image.Width)
+                            continue;
+                        
+                        OutputImage.SetPixel(x, y, color);
                     }
                 }
                 else
@@ -2442,64 +2476,121 @@ namespace INFOIBV
                     for (int x = 0; x < image.Width; x++) // loop over columns
                     {
                         int y = (int)calcLineY(x, center.X, center.Y);
-                        y = Math.Min(Math.Max(y, 0), image.Height - 1);
-                        OutputImage.SetPixel(x, y, Color.Red);
+                        
+                        // Discard the x and y if the x is outside the image
+                        if (y < 0 || y >= image.Height)
+                            continue;
+                        
+                        OutputImage.SetPixel(x, y, color);
                     }
                 }
-                
-                // set the pixel color at coordinate (x,y)
             }
             return OutputImage;
         }
-        
-        private Bitmap visualiseCrossingsColor(Bitmap inputBitmap, List<Point> rThetaPairs)
-        {
-            List<Point> crossingList = findCrossings(rThetaPairs, inputBitmap.Width, inputBitmap.Height);
 
+        /// <summary>
+        /// Visualise the crossings as a size x size square in the given color
+        /// </summary>
+        /// <param name="inputBitmap"> The bitmap to draw to</param>
+        /// <param name="threshold"> The threshold for the amount of lines that cross</param>
+        /// <param name="size"> The size of the drawn square</param>
+        /// <param name="rThetaPairs"> The r theta pairs</param>
+        /// <param name="color"> The color to draw the square in</param>
+        private Bitmap visualiseCrossingsColor(Bitmap inputBitmap, byte threshold, int size, List<Point> rThetaPairs,
+            Color color)
+        {
+            // Input checking
+            if (size % 2 == 0)
+                throw new ArgumentException("visualiseCrossingsColor got an even size");
+
+            // Calculate all the crossings in the image
+            List<Point> crossingList = findCrossings(rThetaPairs, threshold, inputBitmap.Width, inputBitmap.Height);
+
+            // Draw the crossings to the bitmap in a size x size square around the crossing
             foreach (var crossing in crossingList)
             {
-                inputBitmap.SetPixel(crossing.X, crossing.Y, Color.Yellow);
+                for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    int refX = crossing.X + (x - (size / 2));
+                    int refY = crossing.Y + (y - (size / 2));
+                    refX = Math.Min(Math.Max(refX, 0), inputBitmap.Width);
+                    refY = Math.Min(Math.Max(refY, 0), inputBitmap.Height);
+
+                    inputBitmap.SetPixel(refX, refY, color);
+                }
             }
 
             return inputBitmap;
         }
 
-        private List<Point> findCrossings(List<Point> rThetaPairs, int xSize, int ySize)
+        /// <summary>
+        /// Finds all the points where at least 2 lines cross eachother
+        /// </summary>
+        /// <param name="rThetaPairs"> The r theta pairs of the image</param>
+        /// <param name="threshold"> The threshold for the amount of lines that cross</param>
+        /// <param name="xSize"> The x size of the image</param>
+        /// <param name="ySize"> The y size of the image</param>
+        private List<Point> findCrossings(List<Point> rThetaPairs, byte threshold, int xSize, int ySize)
         {
             // Create the accumulator array
             byte[,] accumulatorArray = new byte[xSize, ySize];
-
-            // Get the max distance of the image
-            int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(xSize, 2) + Math.Pow(ySize, 2)));
 
             // Iterate over the r theta pairs and plot them in the accumulator array
             foreach (var rThetaPair in rThetaPairs)
             {
                 // Extract the r and theta values
-                double inputR = rThetaPair.X;
-                double inputTheta = rThetaPair.Y / 4d;
+                double inputR = rThetaPair.Y;
+                double inputTheta = rThetaPair.X;
                 
                 // Draw the line in the accumulator array
                 drawLineInAccArray(inputR, inputTheta);
             }
 
             // Create a temporary binary image
-            BinaryImage tempImage = new BinaryImage(thresholdImage(accumulatorArray, 1));
+            BinaryImage tempImage = new BinaryImage(thresholdImage(accumulatorArray, threshold));
 
             // Find the centers (and thus the crossings) and return them
-            return findCenterPoints(tempImage, maxDistance);
+            List<Point> centers = findCenterPoints(tempImage, 0);
+            return centers;
 
             // Draw the rThetaPair in the accumulator array
             void drawLineInAccArray(double r, double theta)
             {
-                for (int x = 0; x < xSize; x++) // loop over columns
-                for (int y = 0; y < ySize; y++) // loop over rows
+                if (theta / 4d < 80 || theta  / 4d > 100) // Line is mostly vertical
+                    drawLineYAxis();
+                else // Line is mostly horizontal
+                    drawLineXAxis();
+
+                void drawLineYAxis()
                 {
-                   
-                    if (true)//coordIsOnLine(x, y, theta, r))
+                    for (int y = 0; y < ySize; y++) // loop over rows
                     {
-                        if (accumulatorArray[x, y] != byte.MaxValue)
-                            accumulatorArray[x, y] += 1;
+                        // Get the x corresponding to this y on the given line
+                        int x = (int)calcLineX(y, theta, r);
+                    
+                        // Discard the x and y if the x is outside the image
+                        if (x < 0 || x >= xSize)
+                            continue;
+                    
+                        // Write the coordinate to the accumulator array
+                        accumulatorArray[x, y] += accumulatorArray[x, y] != byte.MaxValue ? (byte) 1 : (byte) 0;
+                    }
+                }
+            
+                void drawLineXAxis()
+                {
+                    for (int x = 0; x < xSize; x++) // loop over columns
+                    {
+                        // Get the x corresponding to this y on the given line
+                        int y = (int)calcLineY(x, theta, r);
+                    
+                        // Discard the x and y if the x is outside the image
+                        if (y < 0 || y >= ySize)
+                            continue;
+                    
+                        // Write the coordinate to the accumulator array
+                        accumulatorArray[x, y] += accumulatorArray[x, y] != byte.MaxValue ? (byte) 1 : (byte) 0;
                     }
                 }
             }
