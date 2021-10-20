@@ -17,18 +17,17 @@ namespace INFOIBV
         // Added so all changes can be made in one place
         private const byte FilterSize = 5;
         private const byte GreyscaleThreshold = 150;
-        private const byte HoughPeakThreshold = 40;
-        private const int MinLineLength = 10;
-        private const int MaxLineGap = 1;
+        private const byte HoughPeakThreshold = 80;
+        private const int CrossingThreshold = 2;
+        private const int MinLineLength = 25;
+        private const int MaxLineGap = 8;
         private static readonly Color FullLineColor = Color.Red;
         private static readonly Color LineSegmentColor = Color.Lime;
         private static readonly Color CrossingColor = Color.BlueViolet;
-
-
-
+        
         private Bitmap InputImage;
         private Bitmap OutputImage;
-        private double stepsPerDegrees = 4;
+        private double stepsPerDegrees = 4d;
 
         public INFOIBV()
         {
@@ -227,7 +226,7 @@ namespace INFOIBV
             // Draw the overlays
             OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
             OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
-            OutputImage = visualiseCrossingsColor(OutputImage, 1, 3, centers, CrossingColor);
+            OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
 
             // display output image
             pictureBox2.Image = OutputImage;
@@ -1816,6 +1815,10 @@ namespace INFOIBV
                         (paramSpaceArray[(int) (i * stepsPerDegrees), (int) r + maxDistance] == (byte) 255)
                             ? (byte) 0
                             : (byte) 1;
+                    if (paramSpaceArray[(int) (i * stepsPerDegrees), (int) r + maxDistance] == (byte) 255)
+                    {
+                        int t = 0;
+                    }
                 }
             }
         }
@@ -1874,7 +1877,7 @@ namespace INFOIBV
         {
             int maxDistance =
                 (int) Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
-            byte[,] paramSpaceArray = new byte[(upperBoundary - lowerBoundary) * 4, maxDistance * 2 + 1];
+            byte[,] paramSpaceArray = new byte[(upperBoundary - lowerBoundary) * (int)stepsPerDegrees, maxDistance * 2 + 1];
             for (int y = 0; y < inputImage.YSize; y++)
             for (int x = 0; x < inputImage.XSize; x++)
             {
@@ -2084,7 +2087,7 @@ namespace INFOIBV
             Point? endPoint = null;
             bool startNewLine = true;
 
-            if (inputTheta / 4 < 80 || inputTheta / 4 > 100) // Line is mostly vertical
+            if (inputTheta / stepsPerDegrees < 80 || inputTheta / stepsPerDegrees > 100) // Line is mostly vertical
                 lineDetectYAxis();
             else // Line is mostly horizontal
                 lineDetectXAxis();
@@ -2239,7 +2242,7 @@ namespace INFOIBV
             Point? endPoint = null;
             bool startNewLine = true;
 
-            if (inputTheta / 4 < 80 || inputTheta / 4 > 100) // Line is mostly vertical
+            if (inputTheta / stepsPerDegrees < 80 || inputTheta / stepsPerDegrees > 100) // Line is mostly vertical
                 lineDetectYAxis();
             else // Line is mostly horizontal
                 lineDetectXAxis();
@@ -2560,7 +2563,7 @@ namespace INFOIBV
                 throw new ArgumentException("visualiseCrossingsColor got an even size");
 
             // Calculate all the crossings in the image
-            List<Point> crossingList = findCrossings(rThetaPairs, threshold, inputBitmap.Width, inputBitmap.Height);
+            List<Point> crossingList = findCrossings(inputBitmap, rThetaPairs, threshold, inputBitmap.Width, inputBitmap.Height);
 
             // Draw the crossings to the bitmap in a size x size square around the crossing
             foreach (var crossing in crossingList)
@@ -2583,11 +2586,12 @@ namespace INFOIBV
         /// <summary>
         /// Finds all the points where at least 2 lines cross eachother
         /// </summary>
+        /// <param name="inputBitmap"> The bitmap to draw to for reference</param>
         /// <param name="rThetaPairs"> The r theta pairs of the image</param>
         /// <param name="threshold"> The threshold for the amount of lines that cross</param>
         /// <param name="xSize"> The x size of the image</param>
         /// <param name="ySize"> The y size of the image</param>
-        private List<Point> findCrossings(List<Point> rThetaPairs, byte threshold, int xSize, int ySize)
+        private List<Point> findCrossings(Bitmap inputBitmap, List<Point> rThetaPairs, byte threshold, int xSize, int ySize)
         {
             // Create the accumulator array
             byte[,] accumulatorArray = new byte[xSize, ySize];
@@ -2606,14 +2610,22 @@ namespace INFOIBV
             // Create a temporary binary image
             BinaryImage tempImage = new BinaryImage(thresholdImage(accumulatorArray, threshold));
 
-            // Find the centers (and thus the crossings) and return them
-            List<Point> centers = findCenterPoints(tempImage, 0);
+            // Find the centers (and thus the crossings)
+            List<Point> centers = new List<Point>();
+
+            // Check if there are at least 'threshold' amount of lines with pixels set to 'on' at the crossing
+            foreach (var crossing in findCenterPoints(tempImage, 0))
+            {
+                if(accumulatorArray[crossing.X, crossing.Y] >= threshold && inputBitmap.GetPixel(crossing.X, crossing.Y) != Color.Empty)
+                    centers.Add(crossing);
+            }
+            
             return centers;
 
             // Draw the rThetaPair in the accumulator array
             void drawLineInAccArray(double r, double theta)
             {
-                if (theta / 4d < 80 || theta / 4d > 100) // Line is mostly vertical
+                if (theta / stepsPerDegrees < 80 || theta / stepsPerDegrees > 100) // Line is mostly vertical
                     drawLineYAxis();
                 else // Line is mostly horizontal
                     drawLineXAxis();
