@@ -16,11 +16,11 @@ namespace INFOIBV
         // Create the global constants for this operation
         // Added so all changes can be made in one place
         private const byte FilterSize = 9;
-        private const byte GreyscaleThreshold = 150;
-        private const byte HoughPeakThreshold = 70;
+        private const byte GreyscaleThreshold = 120;
+        private const byte HoughPeakThreshold = 80;
         private const int CrossingThreshold = 1;
-        private const int MinLineLength = 20;
-        private const int MaxLineGap = 2;
+        private const int MinLineLength = 10;
+        private const int MaxLineGap = 1;
         private const int minimumIntesityThreshold = 100;
         private static readonly Color FullLineColor = Color.Red;
         private static readonly Color LineSegmentColor = Color.Lime;
@@ -168,20 +168,23 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image);
 
             // adjust the contrast
-            workingImage = adjustContrast(workingImage);
+            //workingImage = adjustContrast(workingImage);
 
             // apply median filter
-            workingImage = medianFilterParallel(workingImage, FilterSize);
+            //workingImage = medianFilterParallel(workingImage, FilterSize);
 
             // apply edge detection
-            workingImage = edgeMagnitude(workingImage);
+            //workingImage = edgeMagnitude(workingImage);
+            
+            // apply a threshold
+            workingImage = thresholdImage(workingImage, GreyscaleThreshold);
 
             // apply the hough transform
-            List<Point> centers = peakFinding(workingImage, HoughPeakThreshold, GreyscaleThreshold);
+            List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                line.AddRange(houghLineDetection(workingImage, center, minimumIntesityThreshold, MinLineLength, MaxLineGap));
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
             }
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -198,9 +201,9 @@ namespace INFOIBV
             }
 
             // Draw the overlays
-            //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
+            OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
             OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
-            //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
+            OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
 
             // display output image
             pictureBox2.Image = OutputImage;
