@@ -150,10 +150,10 @@ namespace INFOIBV
             // =================== YOUR FUNCTION CALLS GO HERE ====================
             // Alternatively you can create buttons to invoke certain functionality
             // ====================================================================
-            
+
             // convert image to grayscale
-            byte[,] workingImage = convertToGrayscale(Image); 
-            
+            byte[,] workingImage = convertToGrayscale(Image);
+
             // adjust the contrast
             //workingImage = adjustContrast(workingImage);
 
@@ -162,7 +162,7 @@ namespace INFOIBV
 
             // apply edge detection
             //workingImage = edgeMagnitude(workingImage);
-            
+
             // apply a threshold
             workingImage = thresholdImage(workingImage, 150);
             //workingImage = houghTranformCircle(new BinaryImage(workingImage), 130);
@@ -193,7 +193,7 @@ namespace INFOIBV
             
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 7));
             */
-            //workingImage = houghTranform(new BinaryImage(workingImage));
+            workingImage = houghTranformCircle(new BinaryImage(workingImage), 54);
             //workingImage = thresholdImage(workingImage, 90);
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -208,13 +208,13 @@ namespace INFOIBV
                         OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
                     }
                 }
-            
-            OutputImage = drawFoundLines(OutputImage, centers);
+
+            //OutputImage = drawFoundLines(OutputImage, centers);
             //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
             //OutputImage = visualiseCrossingsColor(OutputImage, centers);
             pictureBox2.Image = OutputImage; // display output image
         }
-        
+
         /*
          * button_GetLargest_Click: process when user clicks Get Largest Object button
          */
@@ -1762,7 +1762,7 @@ namespace INFOIBV
                     if (inputImage.GetPixelBool(x, y))
                     {
                         applyHough(x, y);
-                       
+
                     }
                 }
             return paramSpaceArray;
@@ -1798,17 +1798,24 @@ namespace INFOIBV
             void applyHough(int a, int b)
             {
                 // dit kan beperkt worden tot een vierkant om (a,b) met grote diameter
-                for (int y = 0; y < inputImage.YSize; y++)
+                for (int x = 0; x < inputImage.XSize; x++)
                 {
-                    for (int x = 0; x < inputImage.XSize; x++)
+                    double temp1 = Math.Pow((x - a), 2);
+                    double temp2 = (r * r);
+                    double temp3 = temp2 - temp1;
+                    int y = (int)Math.Round(Math.Sqrt(temp3) + b);
+                    int y2 = y - ((y - b)*2);
+                    if (y >= 0 && y < inputImage.YSize)
                     {
-                        if (Math.Abs(Math.Pow((x - a), 2) + Math.Pow((y - b),2) - (r*r)) < 2)
-                        {
-                            paramSpaceArray[x,y] += (paramSpaceArray[x,y] == (byte)255) ? (byte)0 : (byte)5;
-                        }
+                        paramSpaceArray[x, y] += (paramSpaceArray[x, y] == (byte)255) ? (byte)0 : (byte)5;
+                        paramSpaceArray[x, y2] += (paramSpaceArray[x, y2] == (byte)255) ? (byte)0 : (byte)5;
                     }
+                        
                 }
+
             }
+
+           
         }
         /// <summary>
         /// builds a hough transform image out of a binary image with a lower and upper angle boundary
@@ -1833,7 +1840,7 @@ namespace INFOIBV
 
             void applyHough(int x, int y)
             {
-                for (double i = lowerBoundary ; i < upperBoundary; i += 0.25)
+                for (double i = lowerBoundary; i < upperBoundary; i += 0.25)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d);
                     paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += (paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
@@ -1856,7 +1863,7 @@ namespace INFOIBV
             image = new BinaryImage(closeImage(image.GetImage(), createStructuringElement(StructuringElementShape.Square, 3)));
 
             return findCenterPoints(image, maxDistance);
-            
+
         }
 
         private List<Point> findCenterPoints(BinaryImage image, int maxDistance)
@@ -2058,7 +2065,7 @@ namespace INFOIBV
             // Check if the given coordinate is on the given line, with a set tolerance of 0.1
             bool coordIsOnLine(int x, int y)
             {
-                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180d) + y * Math.Sin(Math.PI * inputTheta / 180d))) < 0.5;;
+                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180d) + y * Math.Sin(Math.PI * inputTheta / 180d))) < 0.5; ;
             }
 
             // Check if there is a value on this xy coord, or if the value is above the threshold
@@ -2082,7 +2089,7 @@ namespace INFOIBV
                 }
             }
         }
-        
+
         // Check if the given coordinate is on the given line, with a set tolerance of 0.1
         private double calcLineX(int y, double theta, double r)
         {
@@ -2126,15 +2133,15 @@ namespace INFOIBV
             Point startPoint = Point.Empty;
             Point endPoint = Point.Empty;
             bool startNewLine = true;
-            
-            if(inputTheta < 80 || inputTheta > 100)
+
+            if (inputTheta < 80 || inputTheta > 100)
                 lineDetectXAxis();
 
             return lineSegmentList;
-            
+
             void lineDetectXAxis()
             {
-                
+
             }
 
         }
@@ -2377,17 +2384,17 @@ namespace INFOIBV
 
             return inputBitmap;
         }
-        
+
         private Bitmap drawFoundLines(Bitmap image, List<Point> centers)
         {
             foreach (var center in centers)
             {
-                if (center.X/4d > 100 || center.X/4d < 80)
+                if (center.X / 4d > 100 || center.X / 4d < 80)
                 {
                     for (int y = 0; y < image.Height; y++) // loop over columns
                     {
                         int x = (int)calcLineX(y, center.X, center.Y);
-                        x = Math.Min(Math.Max(x, 0), image.Width-1);
+                        x = Math.Min(Math.Max(x, 0), image.Width - 1);
                         OutputImage.SetPixel(x, y, Color.Red);
                     }
                 }
@@ -2400,12 +2407,12 @@ namespace INFOIBV
                         OutputImage.SetPixel(x, y, Color.Red);
                     }
                 }
-                
+
                 // set the pixel color at coordinate (x,y)
             }
             return OutputImage;
         }
-        
+
         private Bitmap visualiseCrossingsColor(Bitmap inputBitmap, List<Point> rThetaPairs)
         {
             List<Point> crossingList = findCrossings(rThetaPairs, inputBitmap.Width, inputBitmap.Height);
@@ -2432,7 +2439,7 @@ namespace INFOIBV
                 // Extract the r and theta values
                 double inputR = rThetaPair.X;
                 double inputTheta = rThetaPair.Y / 4d;
-                
+
                 // Draw the line in the accumulator array
                 drawLineInAccArray(inputR, inputTheta);
             }
@@ -2447,15 +2454,15 @@ namespace INFOIBV
             void drawLineInAccArray(double r, double theta)
             {
                 for (int x = 0; x < xSize; x++) // loop over columns
-                for (int y = 0; y < ySize; y++) // loop over rows
-                {
-                   
-                    if (true)//coordIsOnLine(x, y, theta, r))
+                    for (int y = 0; y < ySize; y++) // loop over rows
                     {
-                        if (accumulatorArray[x, y] != byte.MaxValue)
-                            accumulatorArray[x, y] += 1;
+
+                        if (true)//coordIsOnLine(x, y, theta, r))
+                        {
+                            if (accumulatorArray[x, y] != byte.MaxValue)
+                                accumulatorArray[x, y] += 1;
+                        }
                     }
-                }
             }
         }
 
