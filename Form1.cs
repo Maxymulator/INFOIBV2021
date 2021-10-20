@@ -155,23 +155,23 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image); 
             
             // adjust the contrast
-            workingImage = adjustContrast(workingImage);
+            //workingImage = adjustContrast(workingImage);
 
             // apply median filter
-            workingImage = medianFilterParallel(workingImage, 5);
+            //workingImage = medianFilterParallel(workingImage, 5);
 
             // apply edge detection
-            workingImage = edgeMagnitude(workingImage);
+            //workingImage = edgeMagnitude(workingImage);
             
             // apply a threshold
             workingImage = thresholdImage(workingImage, 150);
             
             // apply the hough transform
-            List<Point> centers = peakFinding(new BinaryImage(workingImage), 65);
+            List<Point> centers = peakFinding(new BinaryImage(workingImage), 10);
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 15, 2));
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 5, 0));
             }
             
             
@@ -210,6 +210,7 @@ namespace INFOIBV
                 }
             //OutputImage = drawFoundLines(OutputImage, centers);
             OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
+            OutputImage = visualiseCrossingsColor(OutputImage, centers);
             pictureBox2.Image = OutputImage; // display output image
         }
         private Bitmap drawFoundLines(Bitmap image, List<Point> centers)
@@ -1839,6 +1840,12 @@ namespace INFOIBV
             //close image
             image = new BinaryImage(closeImage(image.GetImage(), createStructuringElement(StructuringElementShape.Square, 3)));
 
+            return findCenterPoints(image, maxDistance);
+            
+        }
+
+        private List<Point> findCenterPoints(BinaryImage image, int maxDistance)
+        {
             //find regions with BFS
             bool[,] foundPixels = new bool[image.XSize, image.YSize];
             List<List<Point>> regions = new List<List<Point>>();
@@ -1868,6 +1875,7 @@ namespace INFOIBV
                 //add the avererage point
                 centers.Add(new Point((xTotal / region.Count), (int)(yTotal / region.Count) - maxDistance));
             }
+
             return centers;
 
             List<Point> bfs(int x, int y)
@@ -2271,9 +2279,6 @@ namespace INFOIBV
 
         private Bitmap visualiseHoughLineSegmentsColors(Bitmap inputBitmap, byte[,] inputImage, List<Tuple<Point, Point>> lineSegmentList)
         {
-            // Create a temporary output image, which is a copy of the input image
-            //byte[,] outputImage = inputImage;
-
             // Create a binary image to store all the lines
             BinaryImage lineImage = new BinaryImage(inputImage.GetLength(0), inputImage.GetLength(1));
 
@@ -2296,6 +2301,58 @@ namespace INFOIBV
                 }
 
             return inputBitmap;
+        }
+
+        private Bitmap visualiseCrossingsColor(Bitmap inputBitmap, List<Point> rThetaPairs)
+        {
+            List<Point> crossingList = findCrossings(rThetaPairs, inputBitmap.Width, inputBitmap.Height);
+
+            foreach (var crossing in crossingList)
+            {
+                inputBitmap.SetPixel(crossing.X, crossing.Y, Color.Yellow);
+            }
+
+            return inputBitmap;
+        }
+
+        private List<Point> findCrossings(List<Point> rThetaPairs, int xSize, int ySize)
+        {
+            // Create the accumulator array
+            byte[,] accumulatorArray = new byte[xSize, ySize];
+
+            // Get the max distance of the image
+            int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(xSize, 2) + Math.Pow(ySize, 2)));
+
+            // Iterate over the r theta pairs and plot them in the accumulator array
+            foreach (var rThetaPair in rThetaPairs)
+            {
+                // Extract the r and theta values
+                double inputR = rThetaPair.X;
+                double inputTheta = rThetaPair.Y / 4d;
+                
+                // Draw the line in the accumulator array
+                drawLineInAccArray(inputR, inputTheta);
+            }
+
+            // Create a temporary binary image
+            BinaryImage tempImage = new BinaryImage(thresholdImage(accumulatorArray, 1));
+
+            // Find the centers (and thus the crossings) and return them
+            return findCenterPoints(tempImage, maxDistance);
+
+            // Draw the rThetaPair in the accumulator array
+            void drawLineInAccArray(double r, double theta)
+            {
+                for (int x = 0; x < xSize; x++) // loop over columns
+                for (int y = 0; y < ySize; y++) // loop over rows
+                {
+                    if (coordIsOnLine(x, y, theta, r))
+                    {
+                        if (accumulatorArray[x, y] != byte.MaxValue)
+                            accumulatorArray[x, y] += 1;
+                    }
+                }
+            }
         }
 
     }
