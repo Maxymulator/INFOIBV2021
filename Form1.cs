@@ -167,11 +167,11 @@ namespace INFOIBV
             workingImage = thresholdImage(workingImage, 150);
             
             // apply the hough transform
-            List<Point> centers = peakFinding(new BinaryImage(workingImage), 10);
+            List<Point> centers = peakFinding(new BinaryImage(workingImage), 7);
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 5, 0));
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 2, 1));
             }
             
             
@@ -233,8 +233,9 @@ namespace INFOIBV
         // Check if the given coordinate is on the given line, with a set tolerance of 0.1
         private bool coordIsOnLine(int x, int y, double theta, double r)
         {
-            return Math.Abs(r - (x * Math.Cos(Math.PI * (theta / 4) / 180) + y * Math.Sin(Math.PI * (theta / 4) / 180))) < 0.5;
+            return Math.Abs(r - (x * Math.Cos(Math.PI * (theta / 4d) / 180d) + y * Math.Sin(Math.PI * (theta / 4d) / 180d))) < 0.5d;
         }
+        
         /*
          * button_GetLargest_Click: process when user clicks Get Largest Object button
          */
@@ -2083,7 +2084,7 @@ namespace INFOIBV
 
             // Extract the r and theta values
             double inputR = rThetaPair.Y;
-            double inputTheta = rThetaPair.X / 4d;
+            double inputTheta = rThetaPair.X;
 
             // Create the variables for in the loop
             int curLineLength = 0;
@@ -2097,7 +2098,7 @@ namespace INFOIBV
                 for (int x = 0; x < inputImage.XSize; x++)
                 {
                     // If the current pixel is not on the given line, continue to the next pixel
-                    if (!coordIsOnLine(x, y)) continue;
+                    if (!coordIsOnLine(x, y, inputTheta, inputR)) continue;
 
                     if (inputImageAtCoordIsOn(x, y))
                     {
@@ -2112,6 +2113,7 @@ namespace INFOIBV
 
                             // Set the current line length to 1, which it should always be at this point in the operation
                             curLineLength = 1;
+                            curLineGap = 0;
                         }
                         else // Already working on a line
                         {
@@ -2155,10 +2157,10 @@ namespace INFOIBV
             return lineSegmentList;
 
             // Check if the given coordinate is on the given line, with a set tolerance of 0.1
-            bool coordIsOnLine(int x, int y)
-            {
-                return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180d) + y * Math.Sin(Math.PI * inputTheta / 180d))) < 1;
-            }
+            //bool coordIsOnLine(int x, int y)
+            //{
+            //    return Math.Abs(inputR - (x * Math.Cos(Math.PI * inputTheta / 180d) + y * Math.Sin(Math.PI * inputTheta / 180d))) < 1;
+            //}
 
             // Check if there is a value on this xy coord, or if the value is above the threshold
             bool inputImageAtCoordIsOn(int x, int y)
@@ -2309,7 +2311,7 @@ namespace INFOIBV
 
             foreach (var crossing in crossingList)
             {
-                inputBitmap.SetPixel(crossing.X, crossing.Y, Color.Yellow);
+                inputBitmap.SetPixel(crossing.X, crossing.Y, Color.Red);
             }
 
             return inputBitmap;
