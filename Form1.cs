@@ -15,7 +15,7 @@ namespace INFOIBV
     {
         private Bitmap InputImage;
         private Bitmap OutputImage;
-
+        private double stepsPerDegrees = 100;
         public INFOIBV()
         {
             InitializeComponent();
@@ -155,26 +155,27 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image);
 
             // adjust the contrast
-            //workingImage = adjustContrast(workingImage);
+            workingImage = adjustContrast(workingImage);
 
             // apply median filter
-            //workingImage = medianFilterParallel(workingImage, 5);
+            workingImage = medianFilterParallel(workingImage, 5);
 
             // apply edge detection
-            //workingImage = edgeMagnitude(workingImage);
+            workingImage = edgeMagnitude(workingImage);
 
             // apply a threshold
             workingImage = thresholdImage(workingImage, 150);
+            
             //workingImage = houghTranformCircle(new BinaryImage(workingImage), 130);
             // apply the hough transform
             List<Point> centers = peakFinding(new BinaryImage(workingImage), 90);
             List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
             foreach (var center in centers)
             {
-                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 15, 7));
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, 20, 1));
             }
-
-
+            workingImage = houghTranform(new BinaryImage(workingImage));
+            workingImage = thresholdImage(workingImage, 150);
 
 
             // edge detection
@@ -193,7 +194,7 @@ namespace INFOIBV
             
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 7));
             */
-            workingImage = houghTranformCircle(new BinaryImage(workingImage), 54);
+            //workingImage = houghTranformCircle(new BinaryImage(workingImage), 54);
             //workingImage = thresholdImage(workingImage, 90);
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -208,9 +209,9 @@ namespace INFOIBV
                         OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
                     }
                 }
-            
-            OutputImage = drawFoundLines(OutputImage, centers);
-            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
+
+            //OutputImage = drawFoundLines(OutputImage, centers);
+            //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line);
             //OutputImage = visualiseCrossingsColor(OutputImage, centers);
             pictureBox2.Image = OutputImage; // display output image
         }
@@ -1755,7 +1756,7 @@ namespace INFOIBV
         private byte[,] houghTranform(BinaryImage inputImage)
         {
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
-            byte[,] paramSpaceArray = new byte[180 * 4, maxDistance * 2 + 1];
+            byte[,] paramSpaceArray = new byte[180 * (int)stepsPerDegrees, maxDistance * 2 + 1];
             for (int y = 0; y < inputImage.YSize; y++)
                 for (int x = 0; x < inputImage.XSize; x++)
                 {
@@ -1769,10 +1770,10 @@ namespace INFOIBV
 
             void applyHough(int x, int y)
             {
-                for (double i = 0; i < 180; i += 0.25)
+                for (double i = 0; i < 180; i += 1/stepsPerDegrees)
                 {
                     double r = Math.Round(x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d));
-                    paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += (paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
+                    paramSpaceArray[(int)(i * stepsPerDegrees), (int)r + maxDistance] += (paramSpaceArray[(int)(i * stepsPerDegrees), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
                 }
             }
         }
@@ -1804,18 +1805,18 @@ namespace INFOIBV
                     double temp2 = (r * r);
                     double temp3 = temp2 - temp1;
                     int y = (int)Math.Round(Math.Sqrt(temp3) + b);
-                    int y2 = y - ((y - b)*2);
+                    int y2 = y - ((y - b) * 2);
                     if (y >= 0 && y < inputImage.YSize)
                     {
                         paramSpaceArray[x, y] += (paramSpaceArray[x, y] == (byte)255) ? (byte)0 : (byte)5;
                         paramSpaceArray[x, y2] += (paramSpaceArray[x, y2] == (byte)255) ? (byte)0 : (byte)5;
                     }
-                        
+
                 }
 
             }
 
-           
+
         }
         /// <summary>
         /// builds a hough transform image out of a binary image with a lower and upper angle boundary
@@ -1843,7 +1844,7 @@ namespace INFOIBV
                 for (double i = lowerBoundary; i < upperBoundary; i += 0.25)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d);
-                    paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += (paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
+                    paramSpaceArray[(int)(i * stepsPerDegrees), (int)r + maxDistance] += (paramSpaceArray[(int)(i * stepsPerDegrees), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
                 }
             }
         }
@@ -1896,7 +1897,7 @@ namespace INFOIBV
                 }
 
                 //add the avererage point
-                centers.Add(new Point((xTotal / region.Count), (int) (yTotal / region.Count) - maxDistance));
+                centers.Add(new Point((xTotal / region.Count), (int)(yTotal / region.Count) - maxDistance));
             }
             //WEG HALENN TESTTT SKRRTT
             //centers.Clear();
@@ -1982,12 +1983,12 @@ namespace INFOIBV
         /// <param name="r"> The r value of the line</param>
         private double calcLineX(int y, double theta, double r)
         {
-            theta = theta / 4d;
+            theta = theta / stepsPerDegrees;
             double temp1 = r - ((double)y * Math.Sin(Math.PI * theta / 180d));
             double x = temp1 / Math.Cos(Math.PI * theta / 180d);
             return Math.Round(x);
         }
-        
+
         /// <summary>
         /// Calculates the Y coordinate which belongs to the X coordinate of the given line
         /// </summary>
@@ -1996,12 +1997,12 @@ namespace INFOIBV
         /// <param name="r"> The r value of the line</param>
         private double calcLineY(int x, double theta, double r)
         {
-            theta = theta / 4d;
+            theta = theta / stepsPerDegrees;
             double temp1 = r - ((double)x * Math.Cos(Math.PI * theta / 180d));
             double y = temp1 / Math.Sin(Math.PI * theta / 180d);
             return Math.Round(y);
         }
-        
+
         /// <summary>
         /// Gets a list of line segments which run across the given r theta pair
         /// </summary>
@@ -2021,7 +2022,7 @@ namespace INFOIBV
             // Check input
             if (minLineLenght <= 1)
                 throw new ArgumentException("houghLineDetection got an invalid minLineLength");
-            
+
             // Create the list of line segments
             List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
 
@@ -2034,7 +2035,7 @@ namespace INFOIBV
             Point? endPoint = null;
             bool startNewLine = true;
 
-            if (inputTheta / 4 < 80 || inputTheta  / 4 > 100) // Line is mostly vertical
+            if (inputTheta / 4 < 80 || inputTheta / 4 > 100) // Line is mostly vertical
                 lineDetectYAxis();
             else // Line is mostly horizontal
                 lineDetectXAxis();
@@ -2047,11 +2048,11 @@ namespace INFOIBV
                 {
                     // Get the x corresponding to this y on the given line
                     int x = (int)calcLineX(y, inputTheta, inputR);
-                    
+
                     // Discard the x and y if the x is outside the image
                     if (x < 0 || x >= inputImage.GetLength(0))
                         continue;
-                    
+
                     // Check if this current (x, y) coord is 'on'
                     if (yAxisInputImageAtCoordIsOn(x, y))
                         applyLineLogic(x, y);
@@ -2059,18 +2060,18 @@ namespace INFOIBV
                         applyGapLogic(x, y);
                 }
             }
-            
+
             void lineDetectXAxis()
             {
                 for (int x = 0; x < inputImage.GetLength(0); x++) // loop over columns
                 {
                     // Get the x corresponding to this y on the given line
                     int y = (int)calcLineY(x, inputTheta, inputR);
-                    
+
                     // Discard the x and y if the x is outside the image
                     if (y < 0 || y >= inputImage.GetLength(1))
                         continue;
-                    
+
                     // Check if this current (x, y) coord is 'on'
                     if (xAxisInputImageAtCoordIsOn(x, y))
                         applyLineLogic(x, y);
@@ -2085,7 +2086,7 @@ namespace INFOIBV
                        || inputImage[x, y != 0 ? y - 1 : y] >= minIntensityThreshold // check the pixel above
                        || inputImage[x, y != inputImage.GetLength(1) - 1 ? y + 1 : y] >= minIntensityThreshold; // check the pixel below
             }
-            
+
             bool xAxisInputImageAtCoordIsOn(int x, int y)
             {
                 return inputImage[x, y] >= minIntensityThreshold // check the current pixel
@@ -2116,13 +2117,13 @@ namespace INFOIBV
             {
                 // Handle empty space in the image
                 if (startNewLine) return;
-                
+
                 // Check if an error occured
                 if (endPoint is null)
                     throw new Exception("houghLineDetection, something went wrong");
-                
+
                 // If the current gap exceeds the maximum line gap, check if a complete segment has been made
-                if (calcLineLength((Point) endPoint, new Point(x, y)) > maxLineGap)
+                if (calcLineLength((Point)endPoint, new Point(x, y)) > maxLineGap)
                 {
                     // Check if the line is sufficient and add it to the list if needed
                     checkIfLineAndAddToList();
@@ -2145,9 +2146,9 @@ namespace INFOIBV
                 if (startPoint is null || endPoint is null)
                     throw new Exception($"houghLineDetection, Something went wrong");
 
-                Point startPointReal = (Point) startPoint;
-                Point endPointReal = (Point) endPoint;
-                
+                Point startPointReal = (Point)startPoint;
+                Point endPointReal = (Point)endPoint;
+
                 // If the current line length is equal to or above the minimum length, store this segment in the list 
                 if (calcLineLength(startPointReal, endPointReal) >= minLineLenght)
                 {
@@ -2174,7 +2175,7 @@ namespace INFOIBV
             // Check input
             if (minLineLenght <= 1)
                 throw new ArgumentException("houghLineDetection got an invalid minLineLength");
-            
+
             // Create the list of line segments
             List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
 
@@ -2187,7 +2188,7 @@ namespace INFOIBV
             Point? endPoint = null;
             bool startNewLine = true;
 
-            if (inputTheta / 4 < 80 || inputTheta  / 4 > 100) // Line is mostly vertical
+            if (inputTheta / 4 < 80 || inputTheta / 4 > 100) // Line is mostly vertical
                 lineDetectYAxis();
             else // Line is mostly horizontal
                 lineDetectXAxis();
@@ -2200,11 +2201,11 @@ namespace INFOIBV
                 {
                     // Get the x corresponding to this y on the given line
                     int x = (int)calcLineX(y, inputTheta, inputR);
-                    
+
                     // Discard the x and y if the x is outside the image
                     if (x < 0 || x >= inputImage.XSize)
                         continue;
-                    
+
                     // Check if this current (x, y) coord is 'on'
                     if (yAxisInputImageAtCoordIsOn(x, y))
                         applyLineLogic(x, y);
@@ -2212,18 +2213,18 @@ namespace INFOIBV
                         applyGapLogic(x, y);
                 }
             }
-            
+
             void lineDetectXAxis()
             {
                 for (int x = 0; x < inputImage.XSize; x++) // loop over columns
                 {
                     // Get the x corresponding to this y on the given line
                     int y = (int)calcLineY(x, inputTheta, inputR);
-                    
+
                     // Discard the x and y if the x is outside the image
                     if (y < 0 || y >= inputImage.YSize)
                         continue;
-                    
+
                     // Check if this current (x, y) coord is 'on'
                     if (xAxisInputImageAtCoordIsOn(x, y))
                         applyLineLogic(x, y);
@@ -2238,7 +2239,7 @@ namespace INFOIBV
                        || inputImage.GetPixelBool(x, y != 0 ? y - 1 : y) // check the pixel above
                        || inputImage.GetPixelBool(x, y != inputImage.YSize - 1 ? y + 1 : y); // check the pixel below
             }
-            
+
             bool xAxisInputImageAtCoordIsOn(int x, int y)
             {
                 return inputImage.GetPixelBool(x, y) // check the current pixel
@@ -2269,13 +2270,13 @@ namespace INFOIBV
             {
                 // Handle empty space in the image
                 if (startNewLine) return;
-                
+
                 // Check if an error occured
                 if (endPoint is null)
                     throw new Exception("houghLineDetection, something went wrong");
-                
+
                 // If the current gap exceeds the maximum line gap, check if a complete segment has been made
-                if (calcLineLength((Point) endPoint, new Point(x, y)) > maxLineGap)
+                if (calcLineLength((Point)endPoint, new Point(x, y)) > maxLineGap)
                 {
                     // Check if the line is sufficient and add it to the list if needed
                     checkIfLineAndAddToList();
@@ -2298,9 +2299,9 @@ namespace INFOIBV
                 if (startPoint is null || endPoint is null)
                     throw new Exception($"houghLineDetection, Something went wrong");
 
-                Point startPointReal = (Point) startPoint;
-                Point endPointReal = (Point) endPoint;
-                
+                Point startPointReal = (Point)startPoint;
+                Point endPointReal = (Point)endPoint;
+
                 // If the current line length is equal to or above the minimum length, store this segment in the list 
                 if (calcLineLength(startPointReal, endPointReal) >= minLineLenght)
                 {
@@ -2435,7 +2436,7 @@ namespace INFOIBV
         {
             foreach (var center in centers)
             {
-                if (center.X / 4d > 100 || center.X / 4d < 80)
+                if (center.X / stepsPerDegrees > 100 || center.X / stepsPerDegrees < 80)
                 {
                     for (int y = 0; y < image.Height; y++) // loop over columns
                     {
@@ -2484,7 +2485,7 @@ namespace INFOIBV
             {
                 // Extract the r and theta values
                 double inputR = rThetaPair.X;
-                double inputTheta = rThetaPair.Y / 4d;
+                double inputTheta = rThetaPair.Y / stepsPerDegrees;
 
                 // Draw the line in the accumulator array
                 drawLineInAccArray(inputR, inputTheta);
