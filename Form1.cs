@@ -15,13 +15,15 @@ namespace INFOIBV
     {
         // Create the global constants for this operation
         // Added so all changes can be made in one place
-        private const byte FilterSize = 9;
-        private const byte GreyscaleThreshold = 120;
+        private const byte FilterSize = 3;
+        private const byte GreyscaleThreshold = 160;
         private const byte HoughPeakThreshold = 80;
         private const int CrossingThreshold = 1;
-        private const int MinLineLength = 10;
-        private const int MaxLineGap = 1;
+        private const int MinLineLength = 40;
+        private const int MaxLineGap = 0;
         private const int minimumIntesityThreshold = 100;
+        private const int rMin = 10;
+        private const int rMax = 50;
         private static readonly Color FullLineColor = Color.Red;
         private static readonly Color LineSegmentColor = Color.Lime;
         private static readonly Color CrossingColor = Color.BlueViolet;
@@ -168,24 +170,27 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image);
 
             // adjust the contrast
-            //workingImage = adjustContrast(workingImage);
+            workingImage = adjustContrast(workingImage);
 
             // apply median filter
-            //workingImage = medianFilterParallel(workingImage, FilterSize);
+            workingImage = medianFilterParallel(workingImage, FilterSize);
 
             // apply edge detection
-            //workingImage = edgeMagnitude(workingImage);
+            workingImage = edgeMagnitude(workingImage);
+            
             
             // apply a threshold
             workingImage = thresholdImage(workingImage, GreyscaleThreshold);
+            workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
+            //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
 
             // apply the hough transform
-            List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
-            List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
-            foreach (var center in centers)
-            {
-                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
-            }
+            //List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
+            //List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
+            //foreach (var center in centers)
+            //{
+            //    line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
+            //}
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -201,9 +206,9 @@ namespace INFOIBV
             }
 
             // Draw the overlays
-            OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
-            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
-            OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
+            //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
+            //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
+            //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
 
             // display output image
             pictureBox2.Image = OutputImage;
@@ -947,6 +952,30 @@ namespace INFOIBV
                     tempImage[x, y] = 255;
                 else
                     tempImage[x, y] = 0;
+            }
+
+            return tempImage;
+        }
+        /// <summary>
+        /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
+        /// </summary>
+        /// <param name="inputImage"> single-channel (byte) image to threshold</param>
+        /// <param name="thresholdValue"> threshold value </param>
+        /// <returns>single-channel (byte) image</returns>
+        private byte[,,] threshold3D(byte[,,] inputImage, byte thresholdValue)
+        {
+            // create temporary grayscale image
+            byte[,,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1), inputImage.GetLength(2)];
+
+            // iterate over the image pixels and threshold them
+            for (int z = 0; z < tempImage.GetLength(2); z++)
+            for (int y = 0; y < tempImage.GetLength(1); y++)
+            for (int x = 0; x < tempImage.GetLength(0); x++)
+            {
+                if (inputImage[x, y, z] > thresholdValue)
+                    tempImage[x, y, z] = 255;
+                else
+                    tempImage[x, y, z] = 0;
             }
 
             return tempImage;
@@ -1819,22 +1848,22 @@ namespace INFOIBV
         /// </summary>
         /// <param name="inputImage">binary image</param>
         /// <returns>single-channel hough tranform (byte) image</returns>
-        private byte[,] houghTranformCircle(BinaryImage inputImage, int r)
+        private byte[,,] houghTranformCircle(BinaryImage inputImage, int rMin, int rMax)
         {
-            //kan nu nog alleen maar een circle met radius r detecteren
-            byte[,] paramSpaceArray = new byte[inputImage.XSize, inputImage.YSize];
-            for (int y = 0; y < inputImage.YSize; y++)
-            for (int x = 0; x < inputImage.XSize; x++)
+            byte[,,] paramSpaceArray = new byte[inputImage.XSize, inputImage.YSize, rMax - rMin];
+            for (int z = 0; z < paramSpaceArray.GetLength(2); z++)
+            for (int y = 0; y < paramSpaceArray.GetLength(1); y++)
+            for (int x = 0; x < paramSpaceArray.GetLength(0); x++)
             {
                 if (inputImage.GetPixelBool(x, y))
                 {
-                    applyHough(x, y);
+                    applyHough(x, y, z);
                 }
             }
 
             return paramSpaceArray;
 
-            void applyHough(int a, int b)
+            void applyHough(int a, int b, int r)
             {
                 // dit kan beperkt worden tot een vierkant om (a,b) met grote diameter
                 for (int x = 0; x < inputImage.XSize; x++)
@@ -1844,17 +1873,14 @@ namespace INFOIBV
                     double temp3 = temp2 - temp1;
                     int y = (int) Math.Round(Math.Sqrt(temp3) + b);
                     int y2 = y - ((y - b) * 2);
-                    if (y >= 0 && y < inputImage.YSize)
+                    if (y >= 0 && y < inputImage.YSize && y2 >=0 && y2 < inputImage.YSize)
                     {
-                        paramSpaceArray[x, y] += (paramSpaceArray[x, y] == (byte) 255) ? (byte) 0 : (byte) 5;
-                        paramSpaceArray[x, y2] += (paramSpaceArray[x, y2] == (byte) 255) ? (byte) 0 : (byte) 5;
+                        paramSpaceArray[x, y, r] += (paramSpaceArray[x, y, r] == (byte) 255) ? (byte) 0 : (byte) 1;
+                        paramSpaceArray[x, y2, r] += (paramSpaceArray[x, y2, r] == (byte) 255) ? (byte) 0 : (byte) 1;
                     }
 
                 }
-
             }
-
-
         }
 
         /// <summary>
@@ -1889,7 +1915,55 @@ namespace INFOIBV
                 }
             }
         }
+        /// <summary>
+        /// finds peaks in a hough transform image
+        /// </summary>
+        /// <param name="inputImage">binary image</param>
+        /// <returns>tuple of r-theta pairs where peaks are found</returns>
+        private List<Point> peakFindingCircle(BinaryImage inputImage, byte thresholdValue)
+        {
+            byte[,,] imageByte = houghTranformCircle(inputImage, rMin, rMax);
+            imageByte = nonMaximumSuppression(imageByte);
+            //remove all unecessary data
+            imageByte = threshold3D(imageByte, thresholdValue);
+            //close image
 
+            return null;
+
+        }
+
+        private byte[,,] nonMaximumSuppression(byte[,,] image)
+        {
+            for (int z = 0; z < image.GetLength(2); z++)
+            for (int y = 0; y < image.GetLength(1); y++)
+            for (int x = 0; x < image.GetLength(0); x++)
+            {
+                int maxValue = getMaxValues(x, y, z);
+                if (maxValue > image[x, y, z])
+                    image[x, y, z] = 0;
+            }
+
+            return image;
+
+            byte getMaxValues(int xCenter, int yCenter, int zCenter)
+            {
+                byte maxValue = 0;
+                for (int z = -1; z < 2; z++)
+                for (int y = -1; y < 2; y++)
+                for (int x = -1; x < 2; x++)
+                {
+                    Point3D point = new Point3D(xCenter + x, yCenter + y, zCenter + z);
+                    if (point.X >= 0 && point.X < image.GetLength(0) && 
+                        point.Y >= 0 && point.Y < image.GetLength(1) && 
+                        point.Z >= 0 && point.Z < image.GetLength(2))
+                    {
+                        if (image[(int)point.X, (int)point.Y, (int)point.Z] > maxValue)
+                            maxValue = image[(int)point.X, (int)point.Y, (int)point.Z];
+                    }
+                }
+                return maxValue;
+            }
+        }
         /// <summary>
         /// finds peaks in a hough transform image
         /// </summary>
