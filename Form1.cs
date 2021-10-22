@@ -187,6 +187,8 @@ namespace INFOIBV
                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
             }
 
+            line = pruneLineSegments(line);
+
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
             // Create the output bitmap
@@ -2672,7 +2674,31 @@ namespace INFOIBV
                     }
                 }
             }
-
         }
+
+        private List<LineSegment> pruneLineSegments(List<LineSegment> lineSegments)
+        {
+            LineSegment[] lsArray = lineSegments.ToArray();
+            //Array.Sort(lsArray, (o1, o2) => o1.Theta.CompareTo(o2.Theta));
+            for (int i = 0; i < lsArray.Length; i++) // Iterate over the line segments
+            for (int j = 0; j < lsArray.Length; j++) // Iterate over the line segments
+            {
+                if (i == j) // no check needed if same line
+                    continue;
+                if (lsArray[i] is null || lsArray[j] is null) // no check needed if either one is null
+                    continue;
+                if (lsArray[i].IsSimilarTo(lsArray[j])) // check if the lines are similar
+                {
+                    // If another line is found which is similar to lsArray[i], set lsArray[i] to null and continue to next i
+                    lsArray[i] = null;
+                    break;
+                }
+            }
+
+            List<LineSegment> output = lsArray.ToList();
+
+            return output.Where(ls => ls is not null).ToList();
+        }
+        
     }
 }

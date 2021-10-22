@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Windows.Forms.PropertyGridInternal;
 
 namespace INFOIBV
 {
@@ -34,23 +37,60 @@ namespace INFOIBV
         /// <param name="theta"> The theta value of this line segment</param>
         public LineSegment(Point point1, Point point2, double r, double theta)
         {
-            Point1 = point1;
-            Point2 = point2;
+            if (point1.Y < point2.Y || point1.Y == point1.Y && point1.X < point2.X) // Make sure the top or left most point is always Point1
+            {
+                Point1 = point1;
+                Point2 = point2;
+            }
+            else
+            {
+                Point1 = point2;
+                Point2 = point1;
+            }
             R = r;
             Theta = theta;
         }
 
         /// <summary>
-        /// Checks whether this line segment is similar to the given line segment, within the specified margins
+        /// Checks whether this line segment is similar to the given line segment, optionally within the specified margins
         /// </summary>
         /// <param name="otherLine"> The LineSegment for comparison</param>
+        /// <param name="xMargin"> The margin for the x values of the points</param>
+        /// <param name="yMargin"> The margin for the y values of the points</param>
         /// <param name="rMargin"> The margin for the r values</param>
         /// <param name="thetaMargin"> The margin for the theta values</param>
-        /// <returns> true if the line segments are similar within the specified margins</returns>
-        public bool IsSimilarTo(LineSegment otherLine, double rMargin, double thetaMargin)
+        /// <returns> true if the line segments are similar, optionally within the specified margins</returns>
+        public bool IsSimilarTo(LineSegment otherLine, int xMargin = 2, int yMargin = 10, double rMargin = 10d,
+            double thetaMargin = 10d)
         {
-            return Math.Abs(this.Theta - otherLine.Theta) < thetaMargin
-                   && Math.Abs(this.R - otherLine.R) < rMargin;
+            // bool denoting whether the point1s are similar
+            bool p1Similar = Math.Abs(this.Point1.X - otherLine.Point1.X) < xMargin
+                             && Math.Abs(this.Point1.Y - otherLine.Point1.Y) < yMargin;
+            
+            // bool denoting whether the point2s are similar
+            bool p2Similar = Math.Abs(this.Point2.X - otherLine.Point2.X) < xMargin
+                             && Math.Abs(this.Point2.Y - otherLine.Point2.Y) < yMargin;
+            
+            // bool denoting whether the theta values are similar
+            bool thetaSimilar = Math.Abs(this.Theta - otherLine.Theta) < thetaMargin
+                                || Math.Abs(Math.Abs(this.Theta - 720d) - otherLine.Theta) < thetaMargin; //accounting for the 180degree wraparound, favoring the values closer to 0
+                                
+            // bool denoting whether the r values are similar
+            bool rSimilar()
+            {
+                if (this.R > 0 && otherLine.R > 0)
+                    return Math.Abs(this.R - otherLine.R) < rMargin;
+                if (this.R < 0 && otherLine.R < 0)
+                    return Math.Abs(-this.R + otherLine.R) < rMargin;
+                if (this.R < 0 && otherLine.R > 0)
+                    return Math.Abs(-this.R - otherLine.R) < rMargin;
+                if (this.R > 0 && otherLine.R < 0)
+                    return Math.Abs(this.R + otherLine.R) < rMargin;
+                return false;
+            }
+
+            // return true if either both points are similar or if the rTheta pair is similar
+            return p1Similar && p2Similar || thetaSimilar && rSimilar();
         }
 
     }
