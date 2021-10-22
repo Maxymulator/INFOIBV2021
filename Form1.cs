@@ -185,12 +185,12 @@ namespace INFOIBV
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
 
             // apply the hough transform
-            //List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
-            //List<Tuple<Point, Point>> line = new List<Tuple<Point, Point>>();
-            //foreach (var center in centers)
-            //{
-            //    line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
-            //}
+            List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
+            List<LineSegment> line = new List<LineSegment>();
+            foreach (var center in centers)
+            {
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
+            }
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -2148,7 +2148,7 @@ namespace INFOIBV
         /// <param name="minLineLenght"> the minimum length for a line to be considered a line segment</param>
         /// <param name="maxLineGap"> the maximum gap in the line</param>
         /// <returns>a list of start/end (x,y) coordinates</returns>
-        private List<Tuple<Point, Point>> houghLineDetection(
+        private List<LineSegment> houghLineDetection(
             byte[,] inputImage,
             Point rThetaPair,
             byte minIntensityThreshold,
@@ -2160,7 +2160,7 @@ namespace INFOIBV
                 throw new ArgumentException("houghLineDetection got an invalid minLineLength");
 
             // Create the list of line segments
-            List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
+            List<LineSegment> lineSegmentList = new List<LineSegment>();
 
             // Extract the r and theta values
             double inputR = rThetaPair.Y;
@@ -2291,7 +2291,7 @@ namespace INFOIBV
                 if (calcLineLength(startPointReal, endPointReal) >= minLineLenght)
                 {
                     // Add this line segment to the list
-                    lineSegmentList.Add(new Tuple<Point, Point>(startPointReal, endPointReal));
+                    lineSegmentList.Add(new LineSegment(startPointReal, endPointReal, inputR, inputTheta));
                 }
             }
         }
@@ -2304,7 +2304,7 @@ namespace INFOIBV
         /// <param name="minLineLenght"> the minimum length for a line to be considered a line segment</param>
         /// <param name="maxLineGap"> the maximum gap in the line</param>
         /// <returns>a list of start/end (x,y) coordinates</returns>
-        private List<Tuple<Point, Point>> houghLineDetection(
+        private List<LineSegment> houghLineDetection(
             BinaryImage inputImage,
             Point rThetaPair,
             int minLineLenght,
@@ -2315,7 +2315,7 @@ namespace INFOIBV
                 throw new ArgumentException("houghLineDetection got an invalid minLineLength");
 
             // Create the list of line segments
-            List<Tuple<Point, Point>> lineSegmentList = new List<Tuple<Point, Point>>();
+            List<LineSegment> lineSegmentList = new List<LineSegment>();
 
             // Extract the r and theta values
             double inputR = rThetaPair.Y;
@@ -2453,7 +2453,7 @@ namespace INFOIBV
                 if (calcLineLength(startPointReal, endPointReal) >= minLineLenght)
                 {
                     // Add this line segment to the list
-                    lineSegmentList.Add(new Tuple<Point, Point>(startPointReal, endPointReal));
+                    lineSegmentList.Add(new LineSegment(startPointReal, endPointReal, inputR, inputTheta));
                 }
             }
         }
@@ -2505,7 +2505,7 @@ namespace INFOIBV
         /// <param name="lineSegmentList">the list of line segments</param>
         /// <returns>a binary image</returns>
         private BinaryImage visualiseHoughLineSegments(BinaryImage inputImage,
-            List<Tuple<Point, Point>> lineSegmentList)
+            List<LineSegment> lineSegmentList)
         {
             // Create a binary image to store all the lines
             BinaryImage lineImage = new BinaryImage(inputImage.XSize, inputImage.YSize);
@@ -2514,7 +2514,7 @@ namespace INFOIBV
             foreach (var lineSegment in lineSegmentList)
             {
                 // Plot the line in the line image
-                lineImage = plotLineBresenham(lineImage, lineSegment.Item1, lineSegment.Item2);
+                lineImage = plotLineBresenham(lineImage, lineSegment.Point1, lineSegment.Point2);
             }
 
             // Take the OR of the input image and the line image, so the line image is superimposed on the input image
@@ -2527,7 +2527,7 @@ namespace INFOIBV
         /// <param name="inputImage">single chanel (byte) image </param>
         /// <param name="lineSegmentList">the list of line segments</param>
         /// <returns>single chanel (byte) image</returns>
-        private byte[,] visualiseHoughLineSegments(byte[,] inputImage, List<Tuple<Point, Point>> lineSegmentList)
+        private byte[,] visualiseHoughLineSegments(byte[,] inputImage, List<LineSegment> lineSegmentList)
         {
             // Create a temporary output image, which is a copy of the input image
             byte[,] outputImage = inputImage;
@@ -2539,7 +2539,7 @@ namespace INFOIBV
             foreach (var lineSegment in lineSegmentList)
             {
                 // Plot the line in the line image
-                lineImage = plotLineBresenham(lineImage, lineSegment.Item1, lineSegment.Item2);
+                lineImage = plotLineBresenham(lineImage, lineSegment.Point1, lineSegment.Point2);
             }
 
             // Iterate over the output image
@@ -2565,7 +2565,7 @@ namespace INFOIBV
         /// <param name="color"> The color to be used</param>
         /// <returns>single chanel (byte) image</returns>
         private Bitmap visualiseHoughLineSegmentsColors(Bitmap inputBitmap, byte[,] inputImage,
-            List<Tuple<Point, Point>> lineSegmentList, Color color)
+            List<LineSegment> lineSegmentList, Color color)
         {
             // Create a binary image to store all the lines
             BinaryImage lineImage = new BinaryImage(inputImage.GetLength(0), inputImage.GetLength(1));
@@ -2574,7 +2574,7 @@ namespace INFOIBV
             foreach (var lineSegment in lineSegmentList)
             {
                 // Plot the line in the line image
-                lineImage = plotLineBresenham(lineImage, lineSegment.Item1, lineSegment.Item2);
+                lineImage = plotLineBresenham(lineImage, lineSegment.Point1, lineSegment.Point2);
             }
 
             // Iterate over the output image
