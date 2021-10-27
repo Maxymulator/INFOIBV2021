@@ -24,6 +24,7 @@ namespace INFOIBV
         private const double rMin = 30;
         private const double rMax = 40;
         private const int stepsPerR = 2;
+        private static readonly Color CircleColor = Color.Blue;
         private static readonly Color FullLineColor = Color.Red;
         private static readonly Color LineSegmentColor = Color.Lime;
         private static readonly Color CrossingColor = Color.BlueViolet;
@@ -183,7 +184,8 @@ namespace INFOIBV
             //workingImage = thresholdImage(workingImage, GreyscaleThreshold);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
-            peakFindingCircle(new BinaryImage(workingImage), 50);
+            List<Circle> circels = peakFindingCircle(new BinaryImage(workingImage), 50);
+            workingImage = thresholdImage(workingImage, 255);
             // apply the hough transform
             //List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
             //List<LineSegment> line = new List<LineSegment>();
@@ -208,6 +210,7 @@ namespace INFOIBV
             }
 
             // Draw the overlays
+            OutputImage = drawFoundCircles(OutputImage, circels, CircleColor);
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
             //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
@@ -2706,6 +2709,27 @@ namespace INFOIBV
             }
 
             return OutputImage;
+        }
+        /// <summary>
+        /// Draws the circles corresponding to the found center point-radius pairs to the image
+        /// </summary>
+        /// <param name="image"> The bitmap to draw in</param>
+        /// <param name="circles"> The circle center and radius</param>
+        /// <param name="color"> The color to draw the line in</param>
+        private Bitmap drawFoundCircles(Bitmap image, List<Circle> circles, Color color)
+        {
+            foreach (var circle in circles)
+            {
+                for (int t = 0; t < 360; t++)
+                {
+                    int x = (int)Math.Round(circle.Radius * Math.Cos((Math.PI / 180) * t)) + circle.Center.X;
+                    int y = (int)Math.Round(circle.Radius * Math.Sin((Math.PI / 180) * t)) + circle.Center.Y;
+                    if (x > 0 && y > 0 && x < image.Width && y < image.Height)
+                        image.SetPixel(x, y, color);
+                }
+            }
+
+            return image;
         }
 
         /// <summary>
