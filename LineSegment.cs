@@ -27,6 +27,11 @@ namespace INFOIBV
         /// The theta value of this line segment
         /// </summary>
         public double Theta { get; }
+        
+        /// <summary>
+        /// The length of the line
+        /// </summary>
+        public double Length { get; }
 
         /// <summary>
         /// Create a line segment
@@ -49,6 +54,7 @@ namespace INFOIBV
             }
             R = r;
             Theta = theta;
+            Length = Math.Sqrt(Math.Pow((point2.Y - point1.Y), 2) + Math.Pow((point2.X - point1.X), 2));
         }
 
         /// <summary>
