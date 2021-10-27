@@ -202,8 +202,8 @@ namespace INFOIBV
             //workingImage = thresholdImage(workingImage, GreyscaleThreshold);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
-            List<Circle> circels = peakFindingCircle(new BinaryImage(workingImage), 50);
-            workingImage = thresholdImage(workingImage, 255);
+            List<Circle> circels = peakFindingCircle(new BinaryImage(workingImage), 120);
+            //workingImage = thresholdImage(workingImage, 255);
             // apply the hough transform
             //List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
             //List<LineSegment> line = new List<LineSegment>();
@@ -1935,25 +1935,27 @@ namespace INFOIBV
 
             void applyHough(int a, int b, double r)
             {
-                
-                // dit kan beperkt worden tot een vierkant om (a,b) met grote diameter
-                for (int x = 0; x < inputImage.XSize; x++)
+                for (int t = 0; t < 360; t++)
                 {
-                    if (r == 34.5)
-                    {
-                        Console.WriteLine("77");
-                    }
-                    double temp1 = Math.Pow((x - a), 2);
-                    double temp2 = (r * r);
-                    double temp3 = temp2 - temp1;
-                    int y = (int) Math.Round(Math.Sqrt(temp3) + b);
-                    int y2 = y - ((y - b) * 2);
-                    if (y >= 0 && y < inputImage.YSize && y2 >=0 && y2 < inputImage.YSize)
-                    {
+                    int x = (int)Math.Round(r * Math.Cos((Math.PI / 180) * t)) + a;
+                    int y = (int)Math.Round(r * Math.Sin((Math.PI / 180) * t)) + b;
+                    if (x > 0 && y > 0 && x < inputImage.XSize && y < inputImage.YSize)
                         paramSpaceArray[x, y, (int)((r - rMin) * 2)] += 1;
-                        paramSpaceArray[x, y2, (int)((r - rMin) * 2)] += 1;
-                    }
                 }
+                // dit kan beperkt worden tot een vierkant om (a,b) met grote diameter
+                //for (int x = 0; x < inputImage.XSize; x++)
+                //{
+                //    double temp1 = Math.Pow((x - a), 2);
+                //    double temp2 = (r * r);
+                //    double temp3 = temp2 - temp1;
+                //    int y = (int) Math.Round(Math.Sqrt(temp3) + b);
+                //    int y2 = y - ((y - b) * 2);
+                //    if (y >= 0 && y < inputImage.YSize && y2 >=0 && y2 < inputImage.YSize)
+                //    {
+                //        paramSpaceArray[x, y, (int)((r - rMin) * 2)] += 1;
+                //        paramSpaceArray[x, y2, (int)((r - rMin) * 2)] += 1;
+                //    }
+                //}
             }
         }
 
