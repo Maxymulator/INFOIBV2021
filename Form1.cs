@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
+using static INFOIBV.Utils;
 
 
 namespace INFOIBV
@@ -1870,6 +1871,25 @@ namespace INFOIBV
                     paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += 1;
                 }
             }
+        }
+
+        /// <summary>
+        /// Maps the given hough transform image to a byte[,] for visualisation
+        /// DO NOT USE FOR CALCULATION PURPOSES!
+        /// </summary>
+        /// <param name="houghTransformImage"> The hough transform image</param>
+        /// <returns> a byte[,] of the hough transform image for visualisation</returns>
+        private byte[,] visualiseHoughImage(int[,] houghTransformImage)
+        {
+            byte[,] tempImage = new byte[houghTransformImage.GetLength(0), houghTransformImage.GetLength(1)];
+
+            for (int y = 0; y < houghTransformImage.GetLength(1); y++)
+            for (int x = 0; x < houghTransformImage.GetLength(0); x++)
+            {
+                tempImage[x, y] = (byte) houghTransformImage[x, y].Remap(0, int.MaxValue, 0, 255);
+            }
+
+            return tempImage;
         }
 
         /// <summary>
