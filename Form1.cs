@@ -181,7 +181,7 @@ namespace INFOIBV
             
             // apply a threshold
             workingImage = thresholdImage(workingImage, GreyscaleThreshold);
-            workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
+            //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
 
             // apply the hough transform
@@ -192,7 +192,7 @@ namespace INFOIBV
                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
             }
 
-            line = pruneLineSegments(line);
+            //line = pruneLineSegments(line);
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -209,7 +209,7 @@ namespace INFOIBV
 
             // Draw the overlays
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
-            //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
+            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
 
             // display output image
@@ -958,6 +958,7 @@ namespace INFOIBV
 
             return tempImage;
         }
+        
         /// <summary>
         /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
         /// </summary>
@@ -982,6 +983,32 @@ namespace INFOIBV
 
             return tempImage;
         }
+        
+        /// <summary>
+        /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
+        /// </summary>
+        /// <param name="inputImage"> single-channel (byte) image to threshold</param>
+        /// <param name="thresholdValue"> threshold value </param>
+        /// <returns>single-channel (byte) image</returns>
+        private int[,,] threshold3D(int[,,] inputImage, int thresholdValue)
+        {
+            // create temporary grayscale image
+            int[,,] tempImage = new int[inputImage.GetLength(0), inputImage.GetLength(1), inputImage.GetLength(2)];
+
+            // iterate over the image pixels and threshold them
+            for (int z = 0; z < tempImage.GetLength(2); z++)
+            for (int y = 0; y < tempImage.GetLength(1); y++)
+            for (int x = 0; x < tempImage.GetLength(0); x++)
+            {
+                if (inputImage[x, y, z] > thresholdValue)
+                    tempImage[x, y, z] = 255;
+                else
+                    tempImage[x, y, z] = 0;
+            }
+
+            return tempImage;
+        }
+        
         /// <summary>
         /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
         /// </summary>
@@ -1819,10 +1846,10 @@ namespace INFOIBV
         /// </summary>
         /// <param name="inputImage">binary image</param>
         /// <returns>single-channel hough tranform (byte) image</returns>
-        private byte[,] houghTranform(BinaryImage inputImage)
+        private int[,] houghTranform(BinaryImage inputImage)
         {
             int maxDistance = (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
-            byte[,] paramSpaceArray = new byte[180 * (int)4d, maxDistance * 2 + 1];
+            int[,] paramSpaceArray = new int[720, maxDistance * 2 + 1]; // 720 = 180 * 4, we use 4 steps per degree
             for (int y = 0; y < inputImage.YSize; y++)
             for (int x = 0; x < inputImage.XSize; x++)
             {
@@ -1837,7 +1864,7 @@ namespace INFOIBV
 
             void applyHough(int x, int y)
             {
-                for (double i = 0; i < 180; i += 0.25d)
+                for (double i = 0; i < 180; i += 0.25d) // 0.25 = 1 / 4, we use 4 steps per degree
                 {
                     double r = Math.Round(x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d));
                     paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += 1;
@@ -1850,9 +1877,9 @@ namespace INFOIBV
         /// </summary>
         /// <param name="inputImage">binary image</param>
         /// <returns>single-channel hough tranform (byte) image</returns>
-        private byte[,,] houghTranformCircle(BinaryImage inputImage, int rMin, int rMax)
+        private int[,,] houghTranformCircle(BinaryImage inputImage, int rMin, int rMax)
         {
-            byte[,,] paramSpaceArray = new byte[inputImage.XSize, inputImage.YSize, rMax - rMin];
+            int[,,] paramSpaceArray = new int[inputImage.XSize, inputImage.YSize, rMax - rMin];
             for (int z = 0; z < paramSpaceArray.GetLength(2); z++)
             for (int y = 0; y < paramSpaceArray.GetLength(1); y++)
             for (int x = 0; x < paramSpaceArray.GetLength(0); x++)
@@ -1877,8 +1904,8 @@ namespace INFOIBV
                     int y2 = y - ((y - b) * 2);
                     if (y >= 0 && y < inputImage.YSize && y2 >=0 && y2 < inputImage.YSize)
                     {
-                        paramSpaceArray[x, y, r] += (paramSpaceArray[x, y, r] == (byte) 255) ? (byte) 0 : (byte) 1;
-                        paramSpaceArray[x, y2, r] += (paramSpaceArray[x, y2, r] == (byte) 255) ? (byte) 0 : (byte) 1;
+                        paramSpaceArray[x, y, r] += 1;
+                        paramSpaceArray[x, y2, r] += 1;
                     }
 
                 }
@@ -1892,11 +1919,11 @@ namespace INFOIBV
         /// <param name="lowerBoundary">byte minimum angle</param>
         /// <param name="upperBoundary">byte maximum angle</param>
         /// <returns>single-channel hough tranform (byte) image</returns>
-        private byte[,] houghTransformAngleLimits(BinaryImage inputImage, byte lowerBoundary, byte upperBoundary)
+        private int[,] houghTransformAngleLimits(BinaryImage inputImage, int lowerBoundary, int upperBoundary)
         {
             int maxDistance =
                 (int) Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
-            byte[,] paramSpaceArray = new byte[(upperBoundary - lowerBoundary) * 4, maxDistance * 2 + 1];
+            int[,] paramSpaceArray = new int[(upperBoundary - lowerBoundary) * 4, maxDistance * 2 + 1];
             for (int y = 0; y < inputImage.YSize; y++)
             for (int x = 0; x < inputImage.XSize; x++)
             {
@@ -1913,7 +1940,7 @@ namespace INFOIBV
                 for (double i = lowerBoundary; i < upperBoundary; i += 0.25d)
                 {
                     double r = x * Math.Cos(Math.PI * i / 180d) + y * Math.Sin(Math.PI * i / 180d);
-                    paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += (paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] == (byte)255) ? (byte)0 : (byte)1;
+                    paramSpaceArray[(int)(i * 4d), (int)r + maxDistance] += 1;
                 }
             }
         }
@@ -1922,9 +1949,9 @@ namespace INFOIBV
         /// </summary>
         /// <param name="inputImage">binary image</param>
         /// <returns>tuple of r-theta pairs where peaks are found</returns>
-        private List<Point> peakFindingCircle(BinaryImage inputImage, byte thresholdValue)
+        private List<Point> peakFindingCircle(BinaryImage inputImage, int thresholdValue)
         {
-            byte[,,] imageByte = houghTranformCircle(inputImage, rMin, rMax);
+            int[,,] imageByte = houghTranformCircle(inputImage, rMin, rMax);
             imageByte = nonMaximumSuppression(imageByte);
             //remove all unecessary data
             imageByte = threshold3D(imageByte, thresholdValue);
@@ -1934,7 +1961,7 @@ namespace INFOIBV
 
         }
 
-        private byte[,,] nonMaximumSuppression(byte[,,] image)
+        private int[,,] nonMaximumSuppression(int[,,] image)
         {
             for (int z = 0; z < image.GetLength(2); z++)
             for (int y = 0; y < image.GetLength(1); y++)
@@ -1947,9 +1974,9 @@ namespace INFOIBV
 
             return image;
 
-            byte getMaxValues(int xCenter, int yCenter, int zCenter)
+            int getMaxValues(int xCenter, int yCenter, int zCenter)
             {
-                byte maxValue = 0;
+                int maxValue = 0;
                 for (int z = -1; z < 2; z++)
                 for (int y = -1; y < 2; y++)
                 for (int x = -1; x < 2; x++)
@@ -1975,7 +2002,7 @@ namespace INFOIBV
         {
             int maxDistance =
                 (int) Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.XSize, 2) + Math.Pow(inputImage.YSize, 2)));
-            byte[,] imageByte = houghTranform(inputImage);
+            int[,] imageByte = houghTranform(inputImage);
             //remove all unecessary data
             BinaryImage image = new BinaryImage(thresholdImage(imageByte, thresholdValue));
             //close image
@@ -1994,7 +2021,7 @@ namespace INFOIBV
         {
             int maxDistance =
                 (int)Math.Ceiling(Math.Sqrt(Math.Pow(inputImage.GetLength(0), 2) + Math.Pow(inputImage.GetLength(1), 2)));
-            byte[,] imageByte = houghTranform(new BinaryImage(thresholdImage(inputImage, greyScaleThreshold)));
+            int[,] imageByte = houghTranform(new BinaryImage(thresholdImage(inputImage, greyScaleThreshold)));
             //remove all unecessary data
             BinaryImage image = new BinaryImage(thresholdImage(imageByte, thresholdValue));
             //close image
@@ -2680,7 +2707,7 @@ namespace INFOIBV
         private List<Point> findCrossings(Bitmap inputBitmap, List<Point> rThetaPairs, byte threshold, int xSize, int ySize)
         {
             // Create the accumulator array
-            byte[,] accumulatorArray = new byte[xSize, ySize];
+            int[,] accumulatorArray = new int[xSize, ySize];
 
             // Iterate over the r theta pairs and plot them in the accumulator array
             foreach (var rThetaPair in rThetaPairs)
@@ -2728,7 +2755,7 @@ namespace INFOIBV
                             continue;
 
                         // Write the coordinate to the accumulator array
-                        accumulatorArray[x, y] += accumulatorArray[x, y] != byte.MaxValue ? (byte) 1 : (byte) 0;
+                        accumulatorArray[x, y] += accumulatorArray[x, y] != int.MaxValue ? (byte) 1 : (byte) 0;
                     }
                 }
 
@@ -2744,7 +2771,7 @@ namespace INFOIBV
                             continue;
 
                         // Write the coordinate to the accumulator array
-                        accumulatorArray[x, y] += accumulatorArray[x, y] != byte.MaxValue ? (byte) 1 : (byte) 0;
+                        accumulatorArray[x, y] += accumulatorArray[x, y] != int.MaxValue ? (byte) 1 : (byte) 0;
                     }
                 }
             }
