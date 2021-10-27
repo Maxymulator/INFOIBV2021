@@ -22,8 +22,9 @@ namespace INFOIBV
         private const int MinLineLength = 40;
         private const int MaxLineGap = 0;
         private const int minimumIntesityThreshold = 100;
-        private const int rMin = 10;
-        private const int rMax = 50;
+        private const double rMin = 30;
+        private const double rMax = 40;
+        private const int stepsPerR = 2;
         private static readonly Color FullLineColor = Color.Red;
         private static readonly Color LineSegmentColor = Color.Lime;
         private static readonly Color CrossingColor = Color.BlueViolet;
@@ -170,27 +171,27 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image);
 
             // adjust the contrast
-            workingImage = adjustContrast(workingImage);
+            //workingImage = adjustContrast(workingImage);
 
             // apply median filter
-            workingImage = medianFilterParallel(workingImage, FilterSize);
+            //workingImage = medianFilterParallel(workingImage, FilterSize);
 
             // apply edge detection
-            workingImage = edgeMagnitude(workingImage);
-            
-            
+            //workingImage = edgeMagnitude(workingImage);
+
+
             // apply a threshold
-            workingImage = thresholdImage(workingImage, GreyscaleThreshold);
+            //workingImage = thresholdImage(workingImage, GreyscaleThreshold);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
-
+            peakFindingCircle(new BinaryImage(workingImage), 50);
             // apply the hough transform
-            List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
-            List<LineSegment> line = new List<LineSegment>();
-            foreach (var center in centers)
-            {
-                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
-            }
+            //List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
+            //List<LineSegment> line = new List<LineSegment>();
+            //foreach (var center in centers)
+            //{
+            //    line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
+            //}
 
             //line = pruneLineSegments(line);
 
@@ -209,7 +210,7 @@ namespace INFOIBV
 
             // Draw the overlays
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
-            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
+            //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
 
             // display output image
@@ -1877,26 +1878,32 @@ namespace INFOIBV
         /// </summary>
         /// <param name="inputImage">binary image</param>
         /// <returns>single-channel hough tranform (byte) image</returns>
-        private int[,,] houghTranformCircle(BinaryImage inputImage, int rMin, int rMax)
+        private int[,,] houghTranformCircle(BinaryImage inputImage)
         {
-            int[,,] paramSpaceArray = new int[inputImage.XSize, inputImage.YSize, rMax - rMin];
+            int[,,] paramSpaceArray = new int[inputImage.XSize, inputImage.YSize, (int)((rMax - rMin) * stepsPerR)];
             for (int z = 0; z < paramSpaceArray.GetLength(2); z++)
             for (int y = 0; y < paramSpaceArray.GetLength(1); y++)
             for (int x = 0; x < paramSpaceArray.GetLength(0); x++)
             {
                 if (inputImage.GetPixelBool(x, y))
                 {
-                    applyHough(x, y, z);
+
+                            applyHough(x, y,(z / 2d)+rMin);
                 }
             }
 
             return paramSpaceArray;
 
-            void applyHough(int a, int b, int r)
+            void applyHough(int a, int b, double r)
             {
+                
                 // dit kan beperkt worden tot een vierkant om (a,b) met grote diameter
                 for (int x = 0; x < inputImage.XSize; x++)
                 {
+                    if (r == 34.5)
+                    {
+                        Console.WriteLine("77");
+                    }
                     double temp1 = Math.Pow((x - a), 2);
                     double temp2 = (r * r);
                     double temp3 = temp2 - temp1;
@@ -1904,10 +1911,9 @@ namespace INFOIBV
                     int y2 = y - ((y - b) * 2);
                     if (y >= 0 && y < inputImage.YSize && y2 >=0 && y2 < inputImage.YSize)
                     {
-                        paramSpaceArray[x, y, r] += 1;
-                        paramSpaceArray[x, y2, r] += 1;
+                        paramSpaceArray[x, y, (int)((r - rMin) * 2)] += 1;
+                        paramSpaceArray[x, y2, (int)((r - rMin) * 2)] += 1;
                     }
-
                 }
             }
         }
@@ -1949,17 +1955,40 @@ namespace INFOIBV
         /// </summary>
         /// <param name="inputImage">binary image</param>
         /// <returns>tuple of r-theta pairs where peaks are found</returns>
-        private List<Point> peakFindingCircle(BinaryImage inputImage, int thresholdValue)
+        private List<Circle> peakFindingCircle(BinaryImage inputImage, int thresholdValue)
         {
-            int[,,] imageByte = houghTranformCircle(inputImage, rMin, rMax);
+            int[,,] imageByte = houghTranformCircle(inputImage);
             imageByte = nonMaximumSuppression(imageByte);
             //remove all unecessary data
             imageByte = threshold3D(imageByte, thresholdValue);
-            //close image
 
-            return null;
+            byte[,] temp = new byte[imageByte.GetLength(0), imageByte.GetLength(1)];
 
-        }
+            for (int x = 0; x < imageByte.GetLength(0); x++)
+            {
+                for (int y = 0; y < imageByte.GetLength(1); y++)
+                {
+
+                }
+            }
+            return findCenters(imageByte);
+
+            List<Circle> findCenters(int[,,] image)
+            {
+                List<Circle> centers = new List<Circle>();
+
+                for (int z = 0; z < image.GetLength(2); z++)
+                for (int y = 0; y < image.GetLength(1); y++)
+                for (int x = 0; x < image.GetLength(0); x++)
+                {
+                    if (image[x, y, z] == 255)
+                    {
+                        centers.Add(new Circle(new Point(x, y), (z / 2d) + rMin));
+                    }
+                }
+                return centers;
+            }
+        }   
 
         private int[,,] nonMaximumSuppression(int[,,] image)
         {
