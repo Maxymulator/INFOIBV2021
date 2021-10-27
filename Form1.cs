@@ -180,7 +180,7 @@ namespace INFOIBV
             LineSegment ls4 = new LineSegment(new Point(c1x + rad + 1, c1y), new Point(c2x - rad - 1, c2y), 1, 0); // not on circles, between circles
             LineSegment ls5 = new LineSegment(new Point(c1x, c1y + 3 * rad), new Point(c2x, c2y + 3 * rad), 1, 0); // not on circles, below circles
             LineSegment ls6 = new LineSegment(new Point(c1x, c1y), new Point(c2x, c2y), 1, 0); // not on circles, with points at centers
-            List<Circle> cList = new List<Circle>() {c1, c2};
+            List<Circle> cList = new List<Circle>() {c1, c2, c3};
             List<LineSegment> lsList = new List<LineSegment>() {ls1, ls2, ls3, ls4, ls5, ls6};
             List<HPGlasses> found = findConnectedCircles(cList, lsList, 1d);
 
@@ -2967,8 +2967,8 @@ namespace INFOIBV
                         }
                     }
 
-                    // Add the found HP Glasses to the output list if they are new
-                    if(newHPGlasses)
+                    // Add the found HP Glasses to the output list if they are new and if there are glasses to add
+                    if(lsThatConnectTwoCircles.Count > 0 && newHPGlasses)
                         foundGlasses.Add(new HPGlasses(circles[circleIndex], circles[internalCircleIndex], lsThatConnectTwoCircles[lsIndexWithLowestSlopeDiff]));
                     
                 }
