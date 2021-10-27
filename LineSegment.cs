@@ -83,9 +83,11 @@ namespace INFOIBV
                 if (this.R < 0 && otherLine.R < 0)
                     return Math.Abs(-this.R + otherLine.R) < rMargin;
                 if (this.R < 0 && otherLine.R > 0)
-                    return Math.Abs(-this.R - otherLine.R) < rMargin;
+                    return this.R > -(rMargin / 2)
+                           && otherLine.R < rMargin / 2;
                 if (this.R > 0 && otherLine.R < 0)
-                    return Math.Abs(this.R + otherLine.R) < rMargin;
+                    return this.R < rMargin / 2
+                           && otherLine.R > -(rMargin / 2);
                 return false;
             }
 

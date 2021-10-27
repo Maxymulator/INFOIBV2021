@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
@@ -2800,7 +2798,6 @@ namespace INFOIBV
         private List<LineSegment> pruneLineSegments(List<LineSegment> lineSegments)
         {
             LineSegment[] lsArray = lineSegments.ToArray();
-            //Array.Sort(lsArray, (o1, o2) => o1.Theta.CompareTo(o2.Theta));
             for (int i = 0; i < lsArray.Length; i++) // Iterate over the line segments
             for (int j = 0; j < lsArray.Length; j++) // Iterate over the line segments
             {
@@ -2820,6 +2817,74 @@ namespace INFOIBV
 
             return output.Where(ls => ls is not null).ToList();
         }
+
+        /// <summary>
+        /// Find all line segments in the given list of which either one of the points are on the given circle.
+        /// </summary>
+        /// <param name="circle"> The circle to compare each line segment to</param>
+        /// <param name="lineSegments"> The line segments to check</param>
+        /// <param name="margin"> The distance that the line can be removed from the circle while still counting</param>
+        /// <returns> A list of line segments which start or end on the given circle </returns>
+        private List<LineSegment> findLineSegmentsThatStartOnCircle(Circle circle, List<LineSegment> lineSegments, double margin)
+        {
+            // Create a temporary list for all found line segments
+            List<LineSegment> found = new List<LineSegment>();
+            
+            // Iterate over the given line segments
+            foreach (var ls in lineSegments)
+            {
+                // Add this line segment to the found list if either of its points are on the circle within the given margin
+                if(circle.isPointOnCircle(ls.Point1, margin) || circle.isPointOnCircle(ls.Point2, margin))
+                    found.Add(ls);
+            }
+
+            return found;
+        }
+
+        private List<HPGlasses> findConnectedCircles(List<Circle> circles, List<LineSegment> lineSegments, double margin)
+        {
+            // This function is only valid when there are at least 2 circles and at least 1 line segment
+            if (circles.Count < 2 && lineSegments.Count < 1) return null;
+
+            List<HPGlasses> foundGlasses = new List<HPGlasses>();
+            
+            // Iterate over all circles
+            for (int circleIndex = 0; circleIndex < circles.Count; circleIndex++)
+            {
+                // Find all line segments that start or end on this circle
+                List<LineSegment> lsOnCircle =
+                    findLineSegmentsThatStartOnCircle(circles[circleIndex], lineSegments, margin);
+
+                // Iterate over all circles
+                for (int internalCircleIndex = 0; internalCircleIndex < circles.Count; internalCircleIndex++)
+                {
+                    // Only check other circles
+                    if(internalCircleIndex == circleIndex)
+                        continue;
+
+                    // Get all line segments that connect this circle with the overarching circle
+                    List<LineSegment> lsThatConnectTwoCircles =
+                        findLineSegmentsThatStartOnCircle(circles[internalCircleIndex], lsOnCircle, margin);
+                    
+                    // Iterate over all found line segments
+                    foreach (var ls in lsThatConnectTwoCircles)
+                    {
+                        // Check if the line segments does indeed connect both circles
+                        if (circles[circleIndex].isPointOnCircle(ls.Point1, margin) &&
+                            circles[internalCircleIndex].isPointOnCircle(ls.Point2, margin)
+                            || circles[circleIndex].isPointOnCircle(ls.Point2, margin) &&
+                            circles[internalCircleIndex].isPointOnCircle(ls.Point1, margin))
+                        {
+                            // Add the found HP Glasses to the list
+                            foundGlasses.Add(new HPGlasses(circles[circleIndex], circles[internalCircleIndex], ls));
+                        }
+                    }
+                }
+            }
+
+            return foundGlasses;
+        }
+        
         
     }
 }
