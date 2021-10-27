@@ -16,10 +16,10 @@ namespace INFOIBV
         // Added so all changes can be made in one place
         private const byte FilterSize = 3;
         private const byte GreyscaleThreshold = 160;
-        private const byte HoughPeakThreshold = 80;
+        private const byte HoughPeakThreshold = 50;
         private const int CrossingThreshold = 1;
-        private const int MinLineLength = 40;
-        private const int MaxLineGap = 0;
+        private const int MinLineLength = 5;
+        private const int MaxLineGap = 1;
         private const int minimumIntesityThreshold = 100;
         private const double rMin = 30;
         private const double rMax = 40;
@@ -202,15 +202,18 @@ namespace INFOIBV
             //workingImage = thresholdImage(workingImage, GreyscaleThreshold);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
-            List<Circle> circels = peakFindingCircle(new BinaryImage(workingImage), 120);
+            List<Circle> circles = peakFindingCircle(new BinaryImage(workingImage), 140);
             //workingImage = thresholdImage(workingImage, 255);
             // apply the hough transform
-            //List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
-            //List<LineSegment> line = new List<LineSegment>();
-            //foreach (var center in centers)
-            //{
-            //    line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
-            //}
+            List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
+            List<LineSegment> line = new List<LineSegment>();
+            foreach (var center in centers)
+            {
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
+            }
+
+            circles = pruneCircleList(circles);
+            List<HPGlasses> found2 = findConnectedCircles(circles, line, 1d);
 
             //line = pruneLineSegments(line);
 
@@ -228,9 +231,9 @@ namespace INFOIBV
             }
 
             // Draw the overlays
-            OutputImage = drawFoundCircles(OutputImage, circels, CircleColor);
+            OutputImage = drawFoundCircles(OutputImage, circles, CircleColor);
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
-            //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
+            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
 
             // display output image
@@ -2047,9 +2050,9 @@ namespace INFOIBV
             int getMaxValues(int xCenter, int yCenter, int zCenter)
             {
                 int maxValue = 0;
-                for (int z = -1; z < 2; z++)
-                for (int y = -1; y < 2; y++)
-                for (int x = -1; x < 2; x++)
+                for (int z = -3; z < 4; z++)
+                for (int y = -3; y < 4; y++)
+                for (int x = -3; x < 4; x++)
                 {
                     Point3D point = new Point3D(xCenter + x, yCenter + y, zCenter + z);
                     if (point.X >= 0 && point.X < image.GetLength(0) && 
@@ -2890,6 +2893,43 @@ namespace INFOIBV
 
             return output.Where(ls => ls is not null).ToList();
         }
+        
+        private List<Circle> pruneCircleList(List<Circle> circles)
+        {
+            int centerMargin = 2;
+            int radiusMargin = 2;
+            Circle[] lsArray = circles.ToArray();
+            for (int i = 0; i < lsArray.Length; i++) // Iterate over the circles
+            for (int j = 0; j < lsArray.Length; j++) // Iterate over the circles
+            {
+                if (i == j) // no check needed if same line
+                    continue;
+                if (lsArray[i] is null || lsArray[j] is null) // no check needed if either one is null
+                    continue;
+                if (CheckSimilar(lsArray[i], lsArray[j])) // check if the circles are similar
+                {
+                    // If another circle is found which is similar to lsArray[i], set lsArray[i] to null and continue to next i
+                    lsArray[i] = null;
+                    break;
+                }
+            }
+
+            List<Circle> output = lsArray.ToList();
+
+            return output.Where(ls => ls is not null).ToList();
+
+            bool CheckSimilar(Circle c1, Circle c2)
+            {
+                if (Math.Abs(c1.Radius - c2.Radius) < radiusMargin)
+                {
+                    if (Math.Abs(c1.Center.X - c2.Center.X) < centerMargin &&
+                        Math.Abs(c1.Center.Y - c2.Center.Y) < centerMargin)
+                        return true;
+                }
+
+                return false;
+            }
+        }
 
         /// <summary>
         /// Find all line segments in the given list of which either one of the points are on the given circle.
@@ -2938,28 +2978,32 @@ namespace INFOIBV
                     // Get all line segments that connect this circle with the overarching circle
                     List<LineSegment> lsThatConnectTwoCircles =
                         findLineSegmentsThatStartOnCircle(circles[internalCircleIndex], lsOnCircle, margin);
-                    
-                    // Create an array to store the slope difference for each line segment in comparison to the center line of the circles
-                    double[] lsSlopeDiffFromCircleLine = new double[lsThatConnectTwoCircles.Count];
-                   
-                    // Iterate over all found line segments
-                    for (int lsIndex = 0; lsIndex < lsThatConnectTwoCircles.Count; lsIndex++)
+
+                    List<LineSegment> lsThatConnectTwoCirclesPruned = new List<LineSegment>();
+
+                    // Prune the list to make sure the line segments actually connect the two circles
+                    foreach (var ls in lsThatConnectTwoCircles)
                     {
-                        LineSegment ls = lsThatConnectTwoCircles[lsIndex];
-                        
                         // Check if the line segments does indeed connect both circles
                         if (circles[circleIndex].isPointOnCircle(ls.Point1, margin) &&
                             circles[internalCircleIndex].isPointOnCircle(ls.Point2, margin)
                             || circles[circleIndex].isPointOnCircle(ls.Point2, margin) &&
                             circles[internalCircleIndex].isPointOnCircle(ls.Point1, margin))
                         {
-                            // Store the slope difference
-                            lsSlopeDiffFromCircleLine[lsIndex] =
-                                CalcSlopeDiff(circles[circleIndex], circles[internalCircleIndex], ls);
+                            lsThatConnectTwoCirclesPruned.Add(ls);
                         }
-
-                        // If the line segment doesnt actually connect the circles, set the slope difference very high
-                        lsSlopeDiffFromCircleLine[lsIndex] = 10000d;
+                    }
+                    
+                    // Create an array to store the slope difference for each line segment in comparison to the center line of the circles
+                    double[] lsSlopeDiffFromCircleLine = new double[lsThatConnectTwoCirclesPruned.Count];
+                   
+                    // Iterate over all found line segments
+                    for (int lsIndex = 0; lsIndex < lsThatConnectTwoCirclesPruned.Count; lsIndex++)
+                    {
+                        // Store the slope difference
+                        lsSlopeDiffFromCircleLine[lsIndex] =
+                            CalcSlopeDiff(circles[circleIndex], circles[internalCircleIndex],
+                                lsThatConnectTwoCirclesPruned[lsIndex]);
                     }
 
                     // Create a var to indicate the index of the line segment which is the most parallel to the center line of the circles
@@ -2972,8 +3016,8 @@ namespace INFOIBV
                             lsIndexWithLowestSlopeDiff = i;
                         else if (Math.Abs(lsSlopeDiffFromCircleLine[i] - lsSlopeDiffFromCircleLine[lsIndexWithLowestSlopeDiff]) < 0.001) // if the slope diff is very similar, take the shortest line
                         {
-                            lsIndexWithLowestSlopeDiff = lsThatConnectTwoCircles[i].Length <
-                                                         lsThatConnectTwoCircles[lsIndexWithLowestSlopeDiff].Length
+                            lsIndexWithLowestSlopeDiff = lsThatConnectTwoCirclesPruned[i].Length <
+                                                         lsThatConnectTwoCirclesPruned[lsIndexWithLowestSlopeDiff].Length
                                 ? i
                                 : lsIndexWithLowestSlopeDiff;
                         }
@@ -2987,15 +3031,15 @@ namespace INFOIBV
                     {
                         if ((hpg.Circle1 == circles[circleIndex] && hpg.Circle2 == circles[internalCircleIndex] ||
                              hpg.Circle1 == circles[internalCircleIndex] && hpg.Circle2 == circles[circleIndex])
-                            && hpg.NoseBridge == lsThatConnectTwoCircles[lsIndexWithLowestSlopeDiff])
+                            && hpg.NoseBridge == lsThatConnectTwoCirclesPruned[lsIndexWithLowestSlopeDiff])
                         {
                             newHPGlasses = false;
                         }
                     }
 
                     // Add the found HP Glasses to the output list if they are new and if there are glasses to add
-                    if(lsThatConnectTwoCircles.Count > 0 && newHPGlasses)
-                        foundGlasses.Add(new HPGlasses(circles[circleIndex], circles[internalCircleIndex], lsThatConnectTwoCircles[lsIndexWithLowestSlopeDiff]));
+                    if(lsThatConnectTwoCirclesPruned.Count > 0 && newHPGlasses)
+                        foundGlasses.Add(new HPGlasses(circles[circleIndex], circles[internalCircleIndex], lsThatConnectTwoCirclesPruned[lsIndexWithLowestSlopeDiff]));
                     
                 }
             }
