@@ -16,13 +16,13 @@ namespace INFOIBV
         // Added so all changes can be made in one place
         private const byte FilterSize = 3;
         private const byte GreyscaleThreshold = 160;
-        private const byte HoughPeakThreshold = 60;
+        private const byte HoughPeakThreshold = 40;
         private const int CrossingThreshold = 1;
-        private const int MinLineLength = 15;
+        private const int MinLineLength = 10;
         private const int MaxLineGap = 2;
         private const int minimumIntesityThreshold = 100;
-        private const double rMin = 40;
-        private const double rMax = 100;
+        private const double rMin = 20;
+        private const double rMax = 30;
         private const int stepsPerR = 2;
         
         private static readonly Color CircleColor = Color.Blue;
@@ -173,20 +173,20 @@ namespace INFOIBV
             byte[,] workingImage = convertToGrayscale(Image);
 
             // adjust the contrast
-            workingImage = adjustContrast(workingImage);
+            //workingImage = adjustContrast(workingImage);
 
             // apply median filter
-            workingImage = medianFilterParallel(workingImage, FilterSize);
+            //workingImage = medianFilterParallel(workingImage, FilterSize);
 
             // apply edge detection
-            workingImage = edgeMagnitude(workingImage);
+            //workingImage = edgeMagnitude(workingImage);
 
 
             // apply a threshold
             workingImage = thresholdImage(workingImage, GreyscaleThreshold);
 
             //apply closing
-            workingImage = closeImage(workingImage,createStructuringElement(StructuringElementShape.Square,3));
+            //workingImage = closeImage(workingImage,createStructuringElement(StructuringElementShape.Square,3));
 
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
@@ -194,15 +194,15 @@ namespace INFOIBV
             
             //workingImage = thresholdImage(workingImage, 255);
             // apply the hough transform
-            //List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
-            //List<LineSegment> line = new List<LineSegment>();
-            //foreach (var center in centers)
-            //{
-            //    line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
-            //}
+            List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
+            List<LineSegment> line = new List<LineSegment>();
+            foreach (var center in centers)
+            {
+                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
+            }
 
-            //circles = pruneCircleList(circles);
-            //List<HPGlasses> found2 = findConnectedCircles(circles, line, 1d);
+            circles = pruneCircleList(circles);
+            List<HPGlasses> found2 = findConnectedCircles(circles, line, 3d);
 
             //line = pruneLineSegments(line);
 
@@ -222,9 +222,9 @@ namespace INFOIBV
             // Draw the overlays
             OutputImage = drawFoundCircles(OutputImage, circles, CircleColor);
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
-            //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
+            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
-            //OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, HpGlassesColor);
+            OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, HpGlassesColor);
 
             // display output image
             pictureBox2.Image = OutputImage;
@@ -3097,10 +3097,20 @@ namespace INFOIBV
                 int rightCircleRad = (int) Math.Round(rightCircle.Radius);
                 
                 // Get the corners of the bounding box
-                Point topL = new Point(leftCircle.Center.X - leftCircleRad, leftCircle.Center.Y - leftCircleRad);
-                Point botL = new Point(leftCircle.Center.X - leftCircleRad, leftCircle.Center.Y + leftCircleRad);
-                Point topR = new Point(rightCircle.Center.X + rightCircleRad, rightCircle.Center.Y - rightCircleRad);
-                Point botR = new Point(rightCircle.Center.X + rightCircleRad, rightCircle.Center.Y + rightCircleRad);
+                // Point topL = new Point(leftCircle.Center.X - leftCircleRad, leftCircle.Center.Y - leftCircleRad);
+                // Point botL = new Point(leftCircle.Center.X - leftCircleRad, leftCircle.Center.Y + leftCircleRad);
+                // Point topR = new Point(rightCircle.Center.X + rightCircleRad, rightCircle.Center.Y - rightCircleRad);
+                // Point botR = new Point(rightCircle.Center.X + rightCircleRad, rightCircle.Center.Y + rightCircleRad);
+
+                int xMin = leftCircle.Center.X < rightCircle.Center.X ? leftCircle.Center.X - leftCircleRad : rightCircle.Center.X - rightCircleRad; 
+                int xMax = leftCircle.Center.X > rightCircle.Center.X ? leftCircle.Center.X + leftCircleRad : rightCircle.Center.X + rightCircleRad;
+                int yMin = leftCircle.Center.Y < rightCircle.Center.Y ? leftCircle.Center.Y - leftCircleRad : rightCircle.Center.Y - rightCircleRad; 
+                int yMax = leftCircle.Center.Y > rightCircle.Center.Y ? leftCircle.Center.Y + leftCircleRad : rightCircle.Center.Y + rightCircleRad;
+                
+                Point topL = new Point(xMin, yMin);
+                Point botL = new Point(xMin, yMax);
+                Point topR = new Point(xMax, yMin);
+                Point botR = new Point(xMax, yMax);
                 
                 // Plot the lines in the line image
                 lineImage = plotLineBresenham(lineImage, topL, topR); // top side
