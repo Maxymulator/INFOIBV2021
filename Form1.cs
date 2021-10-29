@@ -21,8 +21,8 @@ namespace INFOIBV
         private const int MinLineLength = 5;
         private const int MaxLineGap = 1;
         private const int minimumIntesityThreshold = 100;
-        private const double rMin = 30;
-        private const double rMax = 40;
+        private const double rMin = 40;
+        private const double rMax = 100;
         private const int stepsPerR = 2;
         private static readonly Color CircleColor = Color.Blue;
         private static readonly Color FullLineColor = Color.Red;
@@ -167,53 +167,39 @@ namespace INFOIBV
             // Alternatively you can create buttons to invoke certain functionality
             // ====================================================================
 
-            int c1x = 10;
-            int c1y = 10;
-            int c2x = 20;
-            int c2y = 10;
-            int rad = 2;
-            Circle c1 = new Circle(new Point(c1x, c1y), rad);
-            Circle c2 = new Circle(new Point(c2x, c2y), rad);
-            Circle c3 = new Circle(new Point(100, 100), rad);
-            LineSegment ls1 = new LineSegment(new Point(c1x, c1y + rad), new Point(c2x, c2y - rad), 1, 0); // on circles, very askew
-            LineSegment ls2 = new LineSegment(new Point(c1x + rad, c1y), new Point(c2x - rad, c2y), 1, 0); // on circles, shortest connection
-            LineSegment ls3 = new LineSegment(new Point(c1x - rad, c1y), new Point(c2x + rad, c2y), 1, 0); // on circles, longest connection
-            LineSegment ls4 = new LineSegment(new Point(c1x + rad + 1, c1y), new Point(c2x - rad - 1, c2y), 1, 0); // not on circles, between circles
-            LineSegment ls5 = new LineSegment(new Point(c1x, c1y + 3 * rad), new Point(c2x, c2y + 3 * rad), 1, 0); // not on circles, below circles
-            LineSegment ls6 = new LineSegment(new Point(c1x, c1y), new Point(c2x, c2y), 1, 0); // not on circles, with points at centers
-            List<Circle> cList = new List<Circle>() {c1, c2, c3};
-            List<LineSegment> lsList = new List<LineSegment>() {ls1, ls2, ls3, ls4, ls5, ls6};
-            List<HPGlasses> found = findConnectedCircles(cList, lsList, 1d);
-
             // convert image to grayscale
             byte[,] workingImage = convertToGrayscale(Image);
 
             // adjust the contrast
-            //workingImage = adjustContrast(workingImage);
+            workingImage = adjustContrast(workingImage);
 
             // apply median filter
-            //workingImage = medianFilterParallel(workingImage, FilterSize);
+            workingImage = medianFilterParallel(workingImage, FilterSize);
 
             // apply edge detection
-            //workingImage = edgeMagnitude(workingImage);
+            workingImage = edgeMagnitude(workingImage);
 
 
             // apply a threshold
-            //workingImage = thresholdImage(workingImage, GreyscaleThreshold);
+            workingImage = thresholdImage(workingImage, GreyscaleThreshold);
+
+            //apply closing
+            workingImage = closeImage(workingImage,createStructuringElement(StructuringElementShape.Square,3));
+
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
-            List<Circle> circles = peakFindingCircle(new BinaryImage(workingImage), 140);
+            List<Circle> circles = peakFindingCircle(new BinaryImage(workingImage));
             //workingImage = thresholdImage(workingImage, 255);
             // apply the hough transform
-            List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
-            List<LineSegment> line = new List<LineSegment>();
-            foreach (var center in centers)
-            {
-                line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
-            }
+            //List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
+            //List<LineSegment> line = new List<LineSegment>();
+            //foreach (var center in centers)
+            //{
+            //    line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
+            //}
 
-            circles = pruneCircleList(circles);
-            List<HPGlasses> found2 = findConnectedCircles(circles, line, 1d);
+            //circles = pruneCircleList(circles);
+            //List<HPGlasses> found2 = findConnectedCircles(circles, line, 1d);
 
             //line = pruneLineSegments(line);
 
@@ -233,7 +219,7 @@ namespace INFOIBV
             // Draw the overlays
             OutputImage = drawFoundCircles(OutputImage, circles, CircleColor);
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
-            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
+            //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
 
             // display output image
@@ -989,7 +975,7 @@ namespace INFOIBV
         /// <param name="inputImage"> single-channel (byte) image to threshold</param>
         /// <param name="thresholdValue"> threshold value </param>
         /// <returns>single-channel (byte) image</returns>
-        private byte[,,] threshold3D(byte[,,] inputImage, byte thresholdValue)
+        private byte[,,] threshold3D_2(byte[,,] inputImage, byte thresholdValue)
         {
             // create temporary grayscale image
             byte[,,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1), inputImage.GetLength(2)];
@@ -1014,25 +1000,35 @@ namespace INFOIBV
         /// <param name="inputImage"> single-channel (byte) image to threshold</param>
         /// <param name="thresholdValue"> threshold value </param>
         /// <returns>single-channel (byte) image</returns>
-        private int[,,] threshold3D(int[,,] inputImage, int thresholdValue)
-        {
-            // create temporary grayscale image
-            int[,,] tempImage = new int[inputImage.GetLength(0), inputImage.GetLength(1), inputImage.GetLength(2)];
-
+        private int[,,] threshold3D_2(int[,,] inputImage, int thresholdValue)
+        { 
             // iterate over the image pixels and threshold them
-            for (int z = 0; z < tempImage.GetLength(2); z++)
-            for (int y = 0; y < tempImage.GetLength(1); y++)
-            for (int x = 0; x < tempImage.GetLength(0); x++)
+            for (int z = 0; z < inputImage.GetLength(2); z++)
+            for (int y = 0; y < inputImage.GetLength(1); y++)
+            for (int x = 0; x < inputImage.GetLength(0); x++)
             {
                 if (inputImage[x, y, z] > thresholdValue)
-                    tempImage[x, y, z] = 255;
+                    inputImage[x, y, z] = 255;
                 else
-                    tempImage[x, y, z] = 0;
+                    inputImage[x, y, z] = 0;
             }
 
-            return tempImage;
+            return inputImage;
         }
-        
+        private void threshold3D(ref int[,,] inputImage, int thresholdValue)
+        {
+            // iterate over the image pixels and threshold them
+            for (int z = 0; z < inputImage.GetLength(2); z++)
+                for (int y = 0; y < inputImage.GetLength(1); y++)
+                    for (int x = 0; x < inputImage.GetLength(0); x++)
+                    {
+                        if (inputImage[x, y, z] > thresholdValue)
+                            inputImage[x, y, z] = 255;
+                        else
+                            inputImage[x, y, z] = 0;
+                    }
+        }
+
         /// <summary>
         /// Threshold the given image, setting every value above the given threshold value to white and every value below the given threshold value to black.
         /// </summary>
@@ -1945,20 +1941,16 @@ namespace INFOIBV
                     if (x > 0 && y > 0 && x < inputImage.XSize && y < inputImage.YSize)
                         paramSpaceArray[x, y, (int)((r - rMin) * 2)] += 1;
                 }
-                // dit kan beperkt worden tot een vierkant om (a,b) met grote diameter
-                //for (int x = 0; x < inputImage.XSize; x++)
-                //{
-                //    double temp1 = Math.Pow((x - a), 2);
-                //    double temp2 = (r * r);
-                //    double temp3 = temp2 - temp1;
-                //    int y = (int) Math.Round(Math.Sqrt(temp3) + b);
-                //    int y2 = y - ((y - b) * 2);
-                //    if (y >= 0 && y < inputImage.YSize && y2 >=0 && y2 < inputImage.YSize)
-                //    {
-                //        paramSpaceArray[x, y, (int)((r - rMin) * 2)] += 1;
-                //        paramSpaceArray[x, y2, (int)((r - rMin) * 2)] += 1;
-                //    }
-                //}
+            }
+
+            int calcCircleAccumulator(double r)
+            {
+                double maxCircumference = 2 * Math.PI * (inputImage.XSize < inputImage.YSize ? inputImage.XSize / 2 : inputImage.YSize / 2);
+                double circumference = 2 * r * Math.PI;
+                double maxAcc = 100d;
+                double output = maxAcc - circumference.Remap(1, maxCircumference, 1, maxAcc - 1);
+                
+                return (int)Math.Round(output);
             }
         }
 
@@ -1999,22 +1991,26 @@ namespace INFOIBV
         /// </summary>
         /// <param name="inputImage">binary image</param>
         /// <returns>tuple of r-theta pairs where peaks are found</returns>
-        private List<Circle> peakFindingCircle(BinaryImage inputImage, int thresholdValue)
+        private List<Circle> peakFindingCircle(BinaryImage inputImage)
         {
             int[,,] imageByte = houghTranformCircle(inputImage);
             imageByte = nonMaximumSuppression(imageByte);
             //remove all unecessary data
-            imageByte = threshold3D(imageByte, thresholdValue);
-
-            byte[,] temp = new byte[imageByte.GetLength(0), imageByte.GetLength(1)];
-
-            for (int x = 0; x < imageByte.GetLength(0); x++)
+            int thresholdValue = 0;
+            for (int x = 0; x < inputImage.XSize; x++)
             {
-                for (int y = 0; y < imageByte.GetLength(1); y++)
+                for (int y = 0; y < inputImage.YSize; y++)
                 {
-
+                    for (int z = 0; z < imageByte.GetLength(2); z++)
+                    {
+                        if (imageByte[x, y, z] > thresholdValue)
+                            thresholdValue = imageByte[x, y, z];
+                    }
+                    
                 }
             }
+            threshold3D(ref imageByte, thresholdValue-5);
+
             return findCenters(imageByte);
 
             List<Circle> findCenters(int[,,] image)
@@ -2032,7 +2028,7 @@ namespace INFOIBV
                 }
                 return centers;
             }
-        }   
+        }
 
         private int[,,] nonMaximumSuppression(int[,,] image)
         {
@@ -2050,9 +2046,9 @@ namespace INFOIBV
             int getMaxValues(int xCenter, int yCenter, int zCenter)
             {
                 int maxValue = 0;
-                for (int z = -3; z < 4; z++)
-                for (int y = -3; y < 4; y++)
-                for (int x = -3; x < 4; x++)
+                for (int z = -1; z < 2; z++)
+                for (int y = -1; y < 2; y++)
+                for (int x = -1; x < 2; x++)
                 {
                     Point3D point = new Point3D(xCenter + x, yCenter + y, zCenter + z);
                     if (point.X >= 0 && point.X < image.GetLength(0) && 
