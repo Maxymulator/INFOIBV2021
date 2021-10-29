@@ -39,7 +39,8 @@ namespace INFOIBV
         /// <param name="noseBridge"> The line segment connecting the two circles</param>
         /// <param name="earPiece1"> The first ear piece of the glasses</param>
         /// <param name="earPiece2"> The second ear piece of the glasses</param>
-        public HPGlasses(Circle circle1, LineSegment noseBridge = null, Circle circle2 = null, LineSegment earPiece1 = null,
+        public HPGlasses(Circle circle1, LineSegment noseBridge = null, Circle circle2 = null,
+            LineSegment earPiece1 = null,
             LineSegment earPiece2 = null)
         {
             Circle1 = circle1;
@@ -59,7 +60,7 @@ namespace INFOIBV
             double c2X = Circle2.Center.X;
             double c2Y = Circle2.Center.Y;
             double slopeCircleLine = (c2Y - c1Y) / (c2X - c1X);
-            
+
             double ls1X = NoseBridge.Point1.X;
             double ls1Y = NoseBridge.Point1.Y;
             double ls2X = NoseBridge.Point2.X;
@@ -67,7 +68,7 @@ namespace INFOIBV
             double slopeNoseBridge = (ls2Y - ls1Y) / (ls2X - ls1X);
 
             double margin = 0.5d;
-            
+
             if (slopeCircleLine > 0 && slopeNoseBridge > 0)
                 return Math.Abs(slopeCircleLine - slopeNoseBridge) < margin;
             if (slopeCircleLine < 0 && slopeNoseBridge < 0)
@@ -95,9 +96,11 @@ namespace INFOIBV
             if (NoseBridge is not null)
             {
                 percentage += 20;
-                if (LineSegmentIsParallelToCircles())
-                    percentage += 30;
+                if (Circle2 is not null)
+                    if (LineSegmentIsParallelToCircles())
+                        percentage += 30;
             }
+
             if (EarPiece1 is not null)
                 percentage += 15;
             if (EarPiece2 is not null)
@@ -108,59 +111,64 @@ namespace INFOIBV
 
         public int GetMinXValue()
         {
-            int xMin = Circle1.Center.X - (int) Math.Round(Circle1.Radius);
+            int xMin = Circle1.Center.X - (int)Math.Round(Circle1.Radius);
 
-            if (NoseBridge.Point1.X < xMin)
-                xMin = NoseBridge.Point1.X;
-            
-            if(Circle2 is not null)
+            if (NoseBridge is not null)
+                if (NoseBridge.Point1.X < xMin)
+                    xMin = NoseBridge.Point1.X;
+
+            if (Circle2 is not null)
                 if (Circle2.Center.X - (int)Math.Round(Circle2.Radius) < xMin)
                     xMin = Circle2.Center.X - (int)Math.Round(Circle2.Radius);
-            
-            if(EarPiece1 is not null)
+
+            if (EarPiece1 is not null)
                 if (EarPiece1.Point1.X < xMin)
                     xMin = EarPiece1.Point1.X;
-            
+
             if (EarPiece2 is not null)
                 if (EarPiece2.Point1.X < xMin)
                     xMin = EarPiece2.Point1.X;
-            
+
             return xMin;
         }
-        
+
         public int GetMaxXValue()
         {
-            int xMin = Circle1.Center.X + (int) Math.Round(Circle1.Radius);
+            int xMin = Circle1.Center.X + (int)Math.Round(Circle1.Radius);
 
-            if (NoseBridge.Point2.X > xMin)
-                xMin = NoseBridge.Point2.X;
-            
-            if(Circle2 is not null)
+            if (NoseBridge is not null)
+                if (NoseBridge.Point2.X > xMin)
+                    xMin = NoseBridge.Point2.X;
+
+            if (Circle2 is not null)
                 if (Circle2.Center.X + (int)Math.Round(Circle2.Radius) > xMin)
                     xMin = Circle2.Center.X + (int)Math.Round(Circle2.Radius);
-            
-            if(EarPiece1 is not null)
+
+            if (EarPiece1 is not null)
                 if (EarPiece1.Point2.X > xMin)
                     xMin = EarPiece1.Point2.X;
-            
+
             if (EarPiece2 is not null)
                 if (EarPiece2.Point2.X > xMin)
                     xMin = EarPiece2.Point2.X;
-            
+
             return xMin;
         }
 
         public int GetMinYValue()
         {
-            int yMin = Circle1.Center.Y - (int) Math.Round(Circle1.Radius);
+            int yMin = Circle1.Center.Y - (int)Math.Round(Circle1.Radius);
 
-            if (NoseBridge.Point1.Y < yMin)
-                yMin = NoseBridge.Point1.Y;
-            
-            if (NoseBridge.Point2.Y < yMin)
-                yMin = NoseBridge.Point2.Y;
-            
-            if(Circle2 is not null)
+            if (NoseBridge is not null)
+            {
+                if (NoseBridge.Point1.Y < yMin)
+                    yMin = NoseBridge.Point1.Y;
+
+                if (NoseBridge.Point2.Y < yMin)
+                    yMin = NoseBridge.Point2.Y;
+            }
+
+            if (Circle2 is not null)
                 if (Circle2.Center.Y - (int)Math.Round(Circle2.Radius) < yMin)
                     yMin = Circle2.Center.Y - (int)Math.Round(Circle2.Radius);
 
@@ -185,15 +193,18 @@ namespace INFOIBV
 
         public int GetMaxYValue()
         {
-            int yMax = Circle1.Center.Y + (int) Math.Round(Circle1.Radius);
+            int yMax = Circle1.Center.Y + (int)Math.Round(Circle1.Radius);
 
-            if (NoseBridge.Point1.Y > yMax)
-                yMax = NoseBridge.Point1.Y;
-            
-            if (NoseBridge.Point2.Y > yMax)
-                yMax = NoseBridge.Point2.Y;
-            
-            if(Circle2 is not null)
+            if (NoseBridge is not null)
+            {
+                if (NoseBridge.Point1.Y > yMax)
+                    yMax = NoseBridge.Point1.Y;
+
+                if (NoseBridge.Point2.Y > yMax)
+                    yMax = NoseBridge.Point2.Y;
+            }
+
+            if (Circle2 is not null)
                 if (Circle2.Center.Y + (int)Math.Round(Circle2.Radius) > yMax)
                     yMax = Circle2.Center.Y + (int)Math.Round(Circle2.Radius);
 

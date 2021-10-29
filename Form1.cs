@@ -17,13 +17,13 @@ namespace INFOIBV
         // Added so all changes can be made in one place
         private const byte FilterSize = 3;
         private const byte GreyscaleThreshold = 160;
-        private const byte HoughPeakThreshold = 40;
+        private const byte HoughPeakThreshold = 75;
         private const int CrossingThreshold = 1;
-        private const int MinLineLength = 10;
-        private const int MaxLineGap = 2;
+        private const int MinLineLength = 30;
+        private const int MaxLineGap = 0;
         private const int minimumIntesityThreshold = 100;
-        private const double rMin = 20;
-        private const double rMax = 30;
+        private const double rMin = 30;
+        private const double rMax = 50;
         private const int stepsPerR = 2;
         
         private static readonly Color CircleColor = Color.Blue;
@@ -203,7 +203,7 @@ namespace INFOIBV
             }
 
             circles = pruneCircleList(circles);
-            List<HPGlasses> found2 = findConnectedCircles(circles, line, 3d);
+            List<HPGlasses> found2 = findConnectedCircles(circles, line, 5d);
 
             //line = pruneLineSegments(line);
 
@@ -225,7 +225,7 @@ namespace INFOIBV
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
             OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
-            OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, HpGlassesColor);
+            OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, 0, HpGlassesColor);
 
             // display output image
             pictureBox2.Image = OutputImage;
@@ -2955,7 +2955,286 @@ namespace INFOIBV
             return found;
         }
 
-        private List<HPGlasses> findConnectedCircles(List<Circle> circles, List<LineSegment> lineSegments, double margin)
+        private List<HPGlasses> findConnectedCircles(List<Circle> circles, List<LineSegment> lineSegments,
+            double margin)
+        {
+            // This function is only valid when there are at least 1 circle
+            if (circles.Count < 1) return null;
+            
+            // Catch edge case, no line segments and only 1 circle
+            if (circles.Count == 1 && lineSegments.Count < 1)
+                // Add the only circle as a HPGlasses
+                return new List<HPGlasses>() { new HPGlasses(circles[0])};
+            
+            // Catch edge case, no line segments and 2 circles
+            if (circles.Count == 2 && lineSegments.Count < 1)
+                // Add the only 2 circles as a HPGlasses
+                return new List<HPGlasses>() { new HPGlasses(circles[0], null, circles[1])};
+            
+            // Create a list of found HPGlasses
+            List<HPGlasses> foundGlasses = new List<HPGlasses>();
+            
+            // Iterate over all circles
+            for (int circleIndex = 0; circleIndex < circles.Count; circleIndex++)
+            {
+                // Initialise the variable for this HPGlasses
+                Circle circle1 = circles[circleIndex];
+                
+                // Find all line segments that start or end on this circle
+                List<LineSegment> lsOnCircle = findLineSegmentsThatStartOnCircle(circle1, lineSegments, margin);
+
+                // If there are no line segments crossing this circle, add it to the list and continue
+                if (lsOnCircle.Count == 0)
+                {
+                    foundGlasses.Add(new HPGlasses(circle1));
+                    continue;
+                }
+                
+                // Iterate over all circles to find other circles which might make a pair
+                for (int internalCircleIndex = 0; internalCircleIndex < circles.Count; internalCircleIndex++)
+                {
+                    // Only check other circles
+                    if(internalCircleIndex == circleIndex)
+                        continue;
+                    
+                    // Get all line segments that connect this circle with the overarching circle
+                    List<LineSegment> lsThatConnectTwoCircles = findLineSegmentsThatStartOnCircle(circles[internalCircleIndex], lsOnCircle, margin);
+                    
+                    // Prune the list of line segments to make sure all of them actually connect the circles
+                    lsThatConnectTwoCircles = PruneLsThatConnectTwoCircles(circle1, circles[internalCircleIndex],
+                        lsThatConnectTwoCircles);
+                    
+                    // Check if there are any line segments connecting these circles, continue to the next inner-loop circle if not
+                    if (lsThatConnectTwoCircles.Count == 0) continue;
+
+                    // Store this circle as circle2 of the HPGlasses
+                    Circle circle2 = circles[internalCircleIndex];
+
+                    // Get the best nose bridge candidate and store it
+                    LineSegment noseBridge = GetBestNoseBridge(circle1, circle2, lsThatConnectTwoCircles);
+                    
+                    // Find ear pieces if they exist
+                    LineSegment earPiece1 = FindEarPiece(circle1, noseBridge, lsOnCircle);
+                    LineSegment earPiece2 = FindEarPiece(circle2, noseBridge,
+                        findLineSegmentsThatStartOnCircle(circle2, lineSegments, margin));
+                    
+                    // Store the current HPGlasses
+                    HPGlasses hpgTemp = new HPGlasses(circle1, noseBridge, circle2, earPiece1, earPiece2);
+                    
+                    // Check if hpgTemp has not been found before, if new, add it to the found list
+                    if(GlassesAreNew(hpgTemp))
+                        foundGlasses.Add(hpgTemp);
+                }
+            }
+            
+            // prune the list of found glasses to remove duplicates
+            PruneFoundGlasses();
+
+            return foundGlasses;
+
+            // Returns a list of line segments which actually connect the two given circles
+            List<LineSegment> PruneLsThatConnectTwoCircles(Circle c1, Circle c2, List<LineSegment> lsList)
+            {
+                List<LineSegment> outputList = new List<LineSegment>();
+                
+                // Prune the list to make sure the line segments actually connect the two circles
+                foreach (var ls in lsList)
+                {
+                    // Check if the line segments does indeed connect both circles
+                    if (c1.isPointOnCircle(ls.Point1, margin) &&
+                        c2.isPointOnCircle(ls.Point2, margin)
+                        || c1.isPointOnCircle(ls.Point2, margin) &&
+                        c2.isPointOnCircle(ls.Point1, margin))
+                    {
+                        outputList.Add(ls);
+                    }
+                }
+
+                return outputList;
+            }
+            
+            // Returns the best nose bridge candidate from a list of line segments which connect two circles
+            LineSegment GetBestNoseBridge(Circle c1, Circle c2, List<LineSegment> lsList)
+            {
+                // Check edge case of empty list
+                if (lsList.Count == 0)
+                    return null;
+                
+                // Create a var to store the index of the best candidate
+                int bestIndex = 0;
+                
+                // Calculate the slope of the line between the centers of the circles
+                double c1X = c1.Center.X;
+                double c1Y = c1.Center.Y;
+                double c2X = c2.Center.X;
+                double c2Y = c2.Center.Y;
+                double slopeCircleLine = (c2Y - c1Y) / (c2X - c1X);
+                
+                // Store the lowest slope difference
+                double lowestSlopeDiff = CalcSlopeDiff(slopeCircleLine, lsList[0]);
+                
+                // Iterate over all the lines
+                for (int i = 1; i < lsList.Count; i++) // Starting at 1 because 0 is already stored
+                {
+                    // Calculate the slope difference of this line
+                    double iSlopeDiff = CalcSlopeDiff(slopeCircleLine, lsList[i]);
+
+                    // Check if it is lower than the stored value
+                    if (iSlopeDiff < lowestSlopeDiff)
+                    {
+                        bestIndex = i;
+                        lowestSlopeDiff = iSlopeDiff;
+                    }
+                    // If the slopes are very similar, take the shortest line
+                    else if (Math.Abs(iSlopeDiff - lowestSlopeDiff) < 0.1 &&
+                             lsList[i].Length < lsList[bestIndex].Length)
+                    {
+                        bestIndex = i;
+                        lowestSlopeDiff = iSlopeDiff;
+                    }
+                }
+
+                // Return the best candidate
+                return lsList[bestIndex];
+            }
+            
+            // Calculate the slope difference between the given slope and line
+            double CalcSlopeDiff(double slopeCircleLine, LineSegment ls)
+            {
+                double ls1X = ls.Point1.X;
+                double ls1Y = ls.Point1.Y;
+                double ls2X = ls.Point2.X;
+                double ls2Y = ls.Point2.Y;
+                double slopeNoseBridge = (ls2Y - ls1Y) / (ls2X - ls1X);
+
+                if (slopeCircleLine > 0 && slopeNoseBridge > 0)
+                    return Math.Abs(slopeCircleLine - slopeNoseBridge);
+                if (slopeCircleLine < 0 && slopeNoseBridge < 0)
+                    return Math.Abs(-slopeCircleLine + slopeNoseBridge);
+                if (slopeCircleLine < 0 && slopeNoseBridge > 0 || slopeCircleLine > 0 && slopeNoseBridge < 0)
+                    return Math.Abs(slopeCircleLine) + Math.Abs(slopeNoseBridge);
+                return 100d;
+            }
+
+            // Check whether the given pair of HPGlasses have not yet been found
+            bool GlassesAreNew(HPGlasses givenHpg)
+            {
+                if (foundGlasses.Count == 0) return true;
+
+                // Iterate over all found glasses to check if the given one is new
+                foreach (var hpg in foundGlasses)
+                {
+                    if ((hpg.Circle1 == givenHpg.Circle1 && hpg.Circle2 == givenHpg.Circle2 ||
+                         hpg.Circle1 == givenHpg.Circle2 && hpg.Circle2 == givenHpg.Circle1) &&
+                        hpg.NoseBridge == givenHpg.NoseBridge)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            // Prune the list of found glasses to remove duplicates
+            void PruneFoundGlasses()
+            {
+                // Create an array to store the found glasses in
+                HPGlasses[] hpgArray = foundGlasses.ToArray();
+
+                // Iterate over the array
+                for (int i = 0; i < hpgArray.Length; i++)
+                for (int j = 0; j < hpgArray.Length; j++) // Iterate over the other values
+                {
+                    // Only compare different HPGlasses
+                    if (i == j) continue;
+                    
+                    // If either is null, continue
+                    if(hpgArray[i] is null || hpgArray[j] is null) continue;
+                    
+                    // Check if these glasses match
+                    if (hpgArray[i].Circle1 == hpgArray[j].Circle1 || hpgArray[i].Circle1 == hpgArray[j].Circle2)
+                    {
+                        // Delete this i if the certainty values match or if the certainty value of i is lower
+                        if (hpgArray[i].GetCertainty() <= hpgArray[j].GetCertainty())
+                            hpgArray[i] = null;
+                    }
+                }
+
+                // Return the list, which is pruned by removing the null values
+                foundGlasses = hpgArray.ToList().Where(ls => ls is not null).ToList();
+            }
+            
+            // Try to find an earpiece on the given circle
+            LineSegment FindEarPiece(Circle c, LineSegment noseBridge, List<LineSegment> lsOnCircle)
+            {
+                // Handle the edge cases
+                if (lsOnCircle.Count <= 1) return null; // Either no lines or only the nose bridge
+                if (noseBridge is null) return null; // No nose bridge
+                
+                // Find the point where the nose bridge crosses the circle
+                Point noseBridgeCrossing = new Point();
+                if (c.isPointOnCircle(noseBridge.Point1, margin))
+                    noseBridgeCrossing = noseBridge.Point1;
+                else if (c.isPointOnCircle(noseBridge.Point2, margin))
+                    noseBridgeCrossing = noseBridge.Point2;
+                
+                // Find the point on the circle, opposite the point where the nose bridge touches the circle
+                Point oppositeOfNoseBridge = new Point();
+                int vx = c.Center.X - noseBridgeCrossing.X;
+                int vy = c.Center.Y - noseBridgeCrossing.Y;
+                double length = Math.Sqrt(vx * vx + vy * vy);
+                oppositeOfNoseBridge.X = (int) Math.Round(vx / length * c.Radius + c.Center.X);
+                oppositeOfNoseBridge.Y = (int) Math.Round(vy / length * c.Radius + c.Center.Y);
+
+                // Store the maximum allowed distance
+                int maxDist = (Math.Abs(oppositeOfNoseBridge.X - noseBridgeCrossing.X) + Math.Abs(oppositeOfNoseBridge.Y - noseBridgeCrossing.Y)) * 3 / 4;
+                
+                // Create the iteration variables depicting the best candidate
+                int indexOfClosest = -1;
+                int minXDist = int.MaxValue / 2;
+                int minYDist = int.MaxValue / 2;
+                
+                // Iterate over the given line segments
+                for (int i = 0; i < lsOnCircle.Count; i++)
+                {
+                    // Store this line segment temporarily
+                    LineSegment ls = lsOnCircle[i];
+                    int iXDist = 0;
+                    int iYDist = 0;
+                    
+                    // Calculate the distance from the point of the line on the circle to the point opposite the crossing point of the nose bridge
+                    if (c.isPointOnCircle(ls.Point1, margin)) // Point 1 is on the circle
+                    {
+                        iXDist = Math.Abs(oppositeOfNoseBridge.X - ls.Point1.X);
+                        iYDist = Math.Abs(oppositeOfNoseBridge.Y - ls.Point1.Y);
+                    }
+                    else if (c.isPointOnCircle(ls.Point2, margin)) // Point 2 is on the circle
+                    {
+                        iXDist = Math.Abs(oppositeOfNoseBridge.X - ls.Point2.X);
+                        iYDist = Math.Abs(oppositeOfNoseBridge.Y - ls.Point2.Y);
+                    }
+                    
+                    // Check if the ear piece is on the opposite end of the circle as the nose bridge
+                    if(iXDist + iYDist > maxDist) continue;
+
+                    // Check if the distance is smaller than the currently stored distance
+                    if (iXDist + iYDist < minXDist + minYDist)
+                    {
+                        // Store this ls as the closest candidate
+                        indexOfClosest = i;
+                        minXDist = iXDist;
+                        minYDist = iYDist;
+                    }
+                }
+
+                // If no ear piece is found, return null
+                if (indexOfClosest == -1) return null;
+                // Else return the best candidate
+                return lsOnCircle[indexOfClosest];
+            }
+        }
+        
+        private List<HPGlasses> findConnectedCircles2(List<Circle> circles, List<LineSegment> lineSegments, double margin)
         {
             // This function is only valid when there are at least 2 circles and at least 1 line segment
             if (circles.Count < 2 && lineSegments.Count < 1) return null;
@@ -3078,10 +3357,11 @@ namespace INFOIBV
         /// <param name="inputBitmap"> The input Bitmap</param>
         /// <param name="inputImage">single chanel (byte) image </param>
         /// <param name="hpGlassesList"> The list of hpGlasses</param>
+        /// <param name="minCertainty"> The minimum certainty needed for a HPGlasses to be displayed</param>
         /// <param name="color"> The color to be used</param>
         /// <returns>single chanel (byte) image</returns>
         private Bitmap visualiseHPGlassesColor(Bitmap inputBitmap, byte[,] inputImage,
-            List<HPGlasses> hpGlassesList, Color color)
+            List<HPGlasses> hpGlassesList, int minCertainty, Color color)
         {
             // Create a binary image to store all the lines
             BinaryImage lineImage = new BinaryImage(inputImage.GetLength(0), inputImage.GetLength(1));
@@ -3095,6 +3375,9 @@ namespace INFOIBV
             // Iterate over all the line segments
             foreach (var hpg in hpGlassesList)
             {
+                // Make sure only HPGlasses with a minimum certainty are drawn
+                if (hpg.GetCertainty() < minCertainty) continue;
+                
                 // Get the corner values of the bounding box
                 Point topL = new Point(hpg.GetMinXValue(), hpg.GetMinYValue());
                 Point botL = new Point(hpg.GetMinXValue(), hpg.GetMaxYValue());
