@@ -39,7 +39,7 @@ namespace INFOIBV
         /// <param name="noseBridge"> The line segment connecting the two circles</param>
         /// <param name="earPiece1"> The first ear piece of the glasses</param>
         /// <param name="earPiece2"> The second ear piece of the glasses</param>
-        public HPGlasses(Circle circle1, LineSegment noseBridge, Circle circle2 = null, LineSegment earPiece1 = null,
+        public HPGlasses(Circle circle1, LineSegment noseBridge = null, Circle circle2 = null, LineSegment earPiece1 = null,
             LineSegment earPiece2 = null)
         {
             Circle1 = circle1;

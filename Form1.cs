@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -3084,7 +3085,13 @@ namespace INFOIBV
         {
             // Create a binary image to store all the lines
             BinaryImage lineImage = new BinaryImage(inputImage.GetLength(0), inputImage.GetLength(1));
-
+            
+            // Create a graphics component
+            Graphics g = Graphics.FromImage(inputBitmap);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            
             // Iterate over all the line segments
             foreach (var hpg in hpGlassesList)
             {
@@ -3099,6 +3106,9 @@ namespace INFOIBV
                 lineImage = plotLineBresenham(lineImage, topL, botL); // left side
                 lineImage = plotLineBresenham(lineImage, botL, botR); // bottom side
                 lineImage = plotLineBresenham(lineImage, botR, topR); // right side
+                
+                // Draw the certainty percentage to the image
+                g.DrawString($"{hpg.GetCertainty()}% sure", new Font("Tahoma", 8), Brushes.Yellow, new PointF(hpg.GetMinXValue() + 2, hpg.GetMaxYValue() - 13));
             }
 
             // Iterate over the output image
