@@ -3096,23 +3096,19 @@ namespace INFOIBV
                 int leftCircleRad = (int) Math.Round(leftCircle.Radius);
                 int rightCircleRad = (int) Math.Round(rightCircle.Radius);
                 
-                // Get the corners of the bounding box
-                // Point topL = new Point(leftCircle.Center.X - leftCircleRad, leftCircle.Center.Y - leftCircleRad);
-                // Point botL = new Point(leftCircle.Center.X - leftCircleRad, leftCircle.Center.Y + leftCircleRad);
-                // Point topR = new Point(rightCircle.Center.X + rightCircleRad, rightCircle.Center.Y - rightCircleRad);
-                // Point botR = new Point(rightCircle.Center.X + rightCircleRad, rightCircle.Center.Y + rightCircleRad);
-
+                // Get the corner values of the bounding box
                 int xMin = leftCircle.Center.X < rightCircle.Center.X ? leftCircle.Center.X - leftCircleRad : rightCircle.Center.X - rightCircleRad; 
                 int xMax = leftCircle.Center.X > rightCircle.Center.X ? leftCircle.Center.X + leftCircleRad : rightCircle.Center.X + rightCircleRad;
                 int yMin = leftCircle.Center.Y < rightCircle.Center.Y ? leftCircle.Center.Y - leftCircleRad : rightCircle.Center.Y - rightCircleRad; 
                 int yMax = leftCircle.Center.Y > rightCircle.Center.Y ? leftCircle.Center.Y + leftCircleRad : rightCircle.Center.Y + rightCircleRad;
                 
+                // Store the corner points
                 Point topL = new Point(xMin, yMin);
                 Point botL = new Point(xMin, yMax);
                 Point topR = new Point(xMax, yMin);
                 Point botR = new Point(xMax, yMax);
                 
-                // Plot the lines in the line image
+                // Plot the lines of the bounding box in the line image
                 lineImage = plotLineBresenham(lineImage, topL, topR); // top side
                 lineImage = plotLineBresenham(lineImage, topL, botL); // left side
                 lineImage = plotLineBresenham(lineImage, botL, botR); // bottom side
