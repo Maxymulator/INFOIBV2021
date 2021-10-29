@@ -16,18 +16,19 @@ namespace INFOIBV
         // Added so all changes can be made in one place
         private const byte FilterSize = 3;
         private const byte GreyscaleThreshold = 160;
-        private const byte HoughPeakThreshold = 50;
+        private const byte HoughPeakThreshold = 60;
         private const int CrossingThreshold = 1;
-        private const int MinLineLength = 5;
-        private const int MaxLineGap = 1;
+        private const int MinLineLength = 15;
+        private const int MaxLineGap = 2;
         private const int minimumIntesityThreshold = 100;
-        private const double rMin = 30;
-        private const double rMax = 40;
+        private const double rMin = 10;
+        private const double rMax = 25;
         private const int stepsPerR = 2;
         private static readonly Color CircleColor = Color.Blue;
         private static readonly Color FullLineColor = Color.Red;
         private static readonly Color LineSegmentColor = Color.Lime;
         private static readonly Color CrossingColor = Color.BlueViolet;
+        private static readonly Color HpGlassesColor = Color.Yellow;
         
         private Bitmap InputImage;
         private Bitmap OutputImage;
@@ -202,7 +203,7 @@ namespace INFOIBV
             //workingImage = thresholdImage(workingImage, GreyscaleThreshold);
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
-            List<Circle> circles = peakFindingCircle(new BinaryImage(workingImage), 140);
+            List<Circle> circles = peakFindingCircle(new BinaryImage(workingImage), 250);
             //workingImage = thresholdImage(workingImage, 255);
             // apply the hough transform
             List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
@@ -213,7 +214,7 @@ namespace INFOIBV
             }
 
             circles = pruneCircleList(circles);
-            List<HPGlasses> found2 = findConnectedCircles(circles, line, 1d);
+            List<HPGlasses> found2 = findConnectedCircles(circles, line, 3d);
 
             //line = pruneLineSegments(line);
 
@@ -235,6 +236,7 @@ namespace INFOIBV
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
             OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
+            OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, HpGlassesColor);
 
             // display output image
             pictureBox2.Image = OutputImage;
@@ -3070,7 +3072,58 @@ namespace INFOIBV
             }
             
         }
-        
+
+        /// <summary>
+        /// Superimpose the given line segments on the given input image in the given color
+        /// </summary>
+        /// <param name="inputBitmap"> The input Bitmap</param>
+        /// <param name="inputImage">single chanel (byte) image </param>
+        /// <param name="hpGlassesList"> The list of hpGlasses</param>
+        /// <param name="color"> The color to be used</param>
+        /// <returns>single chanel (byte) image</returns>
+        private Bitmap visualiseHPGlassesColor(Bitmap inputBitmap, byte[,] inputImage,
+            List<HPGlasses> hpGlassesList, Color color)
+        {
+            // Create a binary image to store all the lines
+            BinaryImage lineImage = new BinaryImage(inputImage.GetLength(0), inputImage.GetLength(1));
+
+            // Iterate over all the line segments
+            foreach (var hpg in hpGlassesList)
+            {
+                // Assign the circles to specific places
+                Circle leftCircle = hpg.Circle1.Center.X < hpg.Circle2.Center.X ? hpg.Circle1 : hpg.Circle2;
+                Circle rightCircle = hpg.Circle1.Center.X > hpg.Circle2.Center.X ? hpg.Circle1 : hpg.Circle2;
+                
+                // Get the radii
+                int leftCircleRad = (int) Math.Round(leftCircle.Radius);
+                int rightCircleRad = (int) Math.Round(rightCircle.Radius);
+                
+                // Get the corners of the bounding box
+                Point topL = new Point(leftCircle.Center.X - leftCircleRad, leftCircle.Center.Y - leftCircleRad);
+                Point botL = new Point(leftCircle.Center.X - leftCircleRad, leftCircle.Center.Y + leftCircleRad);
+                Point topR = new Point(rightCircle.Center.X + rightCircleRad, rightCircle.Center.Y - rightCircleRad);
+                Point botR = new Point(rightCircle.Center.X + rightCircleRad, rightCircle.Center.Y + rightCircleRad);
+                
+                // Plot the lines in the line image
+                lineImage = plotLineBresenham(lineImage, topL, topR); // top side
+                lineImage = plotLineBresenham(lineImage, topL, botL); // left side
+                lineImage = plotLineBresenham(lineImage, botL, botR); // bottom side
+                lineImage = plotLineBresenham(lineImage, botR, topR); // right side
+            }
+
+            // Iterate over the output image
+            for (int y = 0; y < inputImage.GetLength(1); y++)
+            for (int x = 0; x < inputImage.GetLength(0); x++)
+            {
+                // If the line image holds a value (and thus a pixel in a line) at the current coordinate, set the value to the given color
+                if (lineImage.GetPixelBool(x, y))
+                {
+                    inputBitmap.SetPixel(x, y, color); // set the pixel color at coordinate (x,y)
+                }
+            }
+
+            return inputBitmap;
+        }
         
     }
 }
