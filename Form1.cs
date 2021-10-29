@@ -3039,7 +3039,7 @@ namespace INFOIBV
 
                     // Add the found HP Glasses to the output list if they are new and if there are glasses to add
                     if(lsThatConnectTwoCirclesPruned.Count > 0 && newHPGlasses)
-                        foundGlasses.Add(new HPGlasses(circles[circleIndex], circles[internalCircleIndex], lsThatConnectTwoCirclesPruned[lsIndexWithLowestSlopeDiff]));
+                        foundGlasses.Add(new HPGlasses(circles[circleIndex], lsThatConnectTwoCirclesPruned[lsIndexWithLowestSlopeDiff], circles[internalCircleIndex]));
                     
                 }
             }
@@ -3088,25 +3088,11 @@ namespace INFOIBV
             // Iterate over all the line segments
             foreach (var hpg in hpGlassesList)
             {
-                // Assign the circles to specific places
-                Circle leftCircle = hpg.Circle1.Center.X < hpg.Circle2.Center.X ? hpg.Circle1 : hpg.Circle2;
-                Circle rightCircle = hpg.Circle1.Center.X > hpg.Circle2.Center.X ? hpg.Circle1 : hpg.Circle2;
-                
-                // Get the radii
-                int leftCircleRad = (int) Math.Round(leftCircle.Radius);
-                int rightCircleRad = (int) Math.Round(rightCircle.Radius);
-                
                 // Get the corner values of the bounding box
-                int xMin = leftCircle.Center.X < rightCircle.Center.X ? leftCircle.Center.X - leftCircleRad : rightCircle.Center.X - rightCircleRad; 
-                int xMax = leftCircle.Center.X > rightCircle.Center.X ? leftCircle.Center.X + leftCircleRad : rightCircle.Center.X + rightCircleRad;
-                int yMin = leftCircle.Center.Y < rightCircle.Center.Y ? leftCircle.Center.Y - leftCircleRad : rightCircle.Center.Y - rightCircleRad; 
-                int yMax = leftCircle.Center.Y > rightCircle.Center.Y ? leftCircle.Center.Y + leftCircleRad : rightCircle.Center.Y + rightCircleRad;
-                
-                // Store the corner points
-                Point topL = new Point(xMin, yMin);
-                Point botL = new Point(xMin, yMax);
-                Point topR = new Point(xMax, yMin);
-                Point botR = new Point(xMax, yMax);
+                Point topL = new Point(hpg.GetMinXValue(), hpg.GetMinYValue());
+                Point botL = new Point(hpg.GetMinXValue(), hpg.GetMaxYValue());
+                Point topR = new Point(hpg.GetMaxXValue(), hpg.GetMinYValue());
+                Point botR = new Point(hpg.GetMaxXValue(), hpg.GetMaxYValue());
                 
                 // Plot the lines of the bounding box in the line image
                 lineImage = plotLineBresenham(lineImage, topL, topR); // top side
