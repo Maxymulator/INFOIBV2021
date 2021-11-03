@@ -3292,7 +3292,7 @@ namespace INFOIBV
                 lineImage = plotLineBresenham(lineImage, botR, topR); // right side
                 
                 // Draw the certainty percentage to the image
-                g.DrawString($"{hpg.GetCertainty()}% sure", new Font("Tahoma", 8), Brushes.Yellow, new PointF(hpg.GetMinXValue() + 2, hpg.GetMaxYValue() - 13));
+                g.DrawString($"{hpg.GetCertainty()}% sure", new Font("Tahoma", 8), new SolidBrush(color), new PointF(hpg.GetMinXValue(0) + 2, hpg.GetMaxYValue(inputImage.GetLength(1)) - 13));
             }
 
             // Iterate over the output image
