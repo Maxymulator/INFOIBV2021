@@ -178,7 +178,7 @@ namespace INFOIBV
             workingImage = invertImage(workingImage);
 
             // adjust the contrast
-            //workingImage = adjustContrast(workingImage);
+            workingImage = adjustContrast(workingImage);
 
             // apply median filter
             workingImage = medianFilterParallel(workingImage, 3);
