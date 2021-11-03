@@ -109,6 +109,10 @@ namespace INFOIBV
             return percentage;
         }
 
+        /// <summary>
+        /// Get the lowest X value of this HPGlasses
+        /// </summary>
+        /// <param name="min"> The minimum value that is allowed to be returned</param>
         public int GetMinXValue(int min)
         {
             int xMin = Circle1.Center.X - (int)Math.Round(Circle1.Radius);
@@ -132,6 +136,10 @@ namespace INFOIBV
             return xMin > min ? xMin : min;
         }
 
+        /// <summary>
+        /// Get the highest X value of this HPGlasses
+        /// </summary>
+        /// <param name="max"> The maximum value that is allowed to be returned</param>
         public int GetMaxXValue(int max)
         {
             int xMax = Circle1.Center.X + (int)Math.Round(Circle1.Radius);
@@ -155,6 +163,10 @@ namespace INFOIBV
             return xMax < max ? xMax : max;
         }
 
+        /// <summary>
+        /// Get the lowest Y value of this HPGlasses
+        /// </summary>
+        /// <param name="min"> The minimum value that is allowed to be returned</param>
         public int GetMinYValue(int min)
         {
             int yMin = Circle1.Center.Y - (int)Math.Round(Circle1.Radius);
@@ -191,6 +203,10 @@ namespace INFOIBV
             return yMin > min ? yMin : min;
         }
 
+        /// <summary>
+        /// Get the highest Y value of this HPGlasses
+        /// </summary>
+        /// <param name="max"> The maximum value that is allowed to be returned</param>
         public int GetMaxYValue(int max)
         {
             int yMax = Circle1.Center.Y + (int)Math.Round(Circle1.Radius);

@@ -28,10 +28,10 @@ namespace INFOIBV
         private const int margeCircles = 250;
         
         private static readonly Color CircleColor = Color.Blue;
-        private static readonly Color FullLineColor = Color.Red;
+        private static readonly Color FullLineColor = Color.Yellow;
         private static readonly Color LineSegmentColor = Color.Lime;
         private static readonly Color CrossingColor = Color.BlueViolet;
-        private static readonly Color HpGlassesColor = Color.Yellow;
+        private static readonly Color HpGlassesColor = Color.Red;
         
         private Bitmap InputImage;
         private Bitmap OutputImage;
@@ -189,52 +189,55 @@ namespace INFOIBV
             // apply edge detection
             workingImage = edgeMagnitude(workingImage);
 
-
             // apply a threshold
             workingImage = thresholdImage(workingImage, 254);
 
-            //apply closing
+            // apply closing
             workingImage = closeImage(workingImage,createStructuringElement(StructuringElementShape.Plus,5));
-
-
-
-            //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
-            //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
+            
+            // find all circles
             List<Circle> circles = peakFindingCircle(new BinaryImage(workingImage));
-
-            //workingImage = thresholdImage(workingImage, 255);
-            // apply the hough transform
             List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
+            circles = pruneCircleList(circles, 10, 10);
+            
+            // find all line segments
             List<LineSegment> line = new List<LineSegment>();
             foreach (var center in centers)
             {
                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
             }
 
-            circles = pruneCircleList(circles, 10, 10);
-            List<HPGlasses> found2 = findConnectedCircles(circles, line, 10d);
-            
-            line = pruneLineSegments(line);
+            // find all Harry Potter Glasses
+            List<HPGlasses> hpGlassesList = findHPGlasses(circles, line, 10d);
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
             // Create the output bitmap
-            OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1));
+            //OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1));
 
-            // copy array to output Bitmap
+            // copy array to output Bitmap - showing pipeline
+            // for (int x = 0; x < workingImage.GetLength(0); x++) // loop over columns
+            // for (int y = 0; y < workingImage.GetLength(1); y++) // loop over rows
+            // {
+            //     Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+            //     OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
+            // }
+            
+            // copy array to output Bitmap - showing original image
             for (int x = 0; x < workingImage.GetLength(0); x++) // loop over columns
             for (int y = 0; y < workingImage.GetLength(1); y++) // loop over rows
             {
-                Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                Color newColor = Image[x, y];
                 OutputImage.SetPixel(x, y, newColor); // set the pixel color at coordinate (x,y)
             }
 
             // Draw the overlays
-            OutputImage = drawFoundCircles(OutputImage, circles, CircleColor);
+            //OutputImage = drawFoundCircles(OutputImage, circles, CircleColor);
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
-            OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
+            //OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
-            OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, 20, HpGlassesColor);
+            //OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, hpGlassesList, 20, HpGlassesColor);
+            OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, hpGlassesList, 20, HpGlassesColor);
 
             // display output image
             pictureBox2.Image = OutputImage;
@@ -1875,6 +1878,7 @@ namespace INFOIBV
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
 
+        #region Assigmnent 3
         /// <summary>
         /// builds a hough transform image for line detection out of a binary image
         /// </summary>
@@ -2867,6 +2871,10 @@ namespace INFOIBV
             }
         }
 
+        /// <summary>
+        /// Prune the line segment list, removing similar line segments
+        /// </summary>
+        /// <param name="lineSegments"> The list of line segments to prune</param>
         private List<LineSegment> pruneLineSegments(List<LineSegment> lineSegments)
         {
             LineSegment[] lsArray = lineSegments.ToArray();
@@ -2890,6 +2898,12 @@ namespace INFOIBV
             return output.Where(ls => ls is not null).ToList();
         }
         
+        /// <summary>
+        /// Prune the circle list, removing overlapping or similar circles
+        /// </summary>
+        /// <param name="circles"> The list of circles to prune</param>
+        /// <param name="centerMargin"> The margin for the center</param>
+        /// <param name="radiusMargin"> The margin for the radius</param>
         private List<Circle> pruneCircleList(List<Circle> circles, int centerMargin, int radiusMargin)
         {
             Circle[] lsArray = circles.ToArray();
@@ -2912,18 +2926,19 @@ namespace INFOIBV
 
             return output.Where(ls => ls is not null).ToList();
 
+            // Check if two circles are similar
             bool CheckSimilar(Circle c1, Circle c2)
             {
-                if (Math.Abs(c1.Radius - c2.Radius) < radiusMargin)
+                if (Math.Abs(c1.Radius - c2.Radius) < radiusMargin) // same radius
                 {
                     if (Math.Abs(c1.Center.X - c2.Center.X) < centerMargin &&
-                        Math.Abs(c1.Center.Y - c2.Center.Y) < centerMargin)
+                        Math.Abs(c1.Center.Y - c2.Center.Y) < centerMargin) // same center
                         return true;
                 }
                 
                 double dist = Math.Sqrt(Math.Pow((c2.Center.Y - c1.Center.Y), 2) + Math.Pow((c2.Center.X - c1.Center.X), 2));
 
-                if (dist < c1.Radius + c2.Radius)
+                if (dist < c1.Radius + c2.Radius) // overlapping
                 {
                     return true;
                 }
@@ -2931,7 +2946,15 @@ namespace INFOIBV
                 return false;
             }
         }
+        
+        #endregion
 
+        // ====================================================================
+        // ============= YOUR FUNCTIONS FOR ASSIGNMENT 4 GO HERE ==============
+        // ====================================================================
+
+        #region Assignment 4
+        
         /// <summary>
         /// Find all line segments in the given list of which either one of the points are on the given circle.
         /// </summary>
@@ -2959,7 +2982,13 @@ namespace INFOIBV
             return found;
         }
 
-        private List<HPGlasses> findConnectedCircles(List<Circle> circles, List<LineSegment> lineSegments,
+        /// <summary>
+        /// Find all Harry Potter Glasses
+        /// </summary>
+        /// <param name="circles"> The list of found circles</param>
+        /// <param name="lineSegments"> The list of found line segments</param>
+        /// <param name="margin"> The maximum allowed distance between the line segments and the circles to still count</param>
+        private List<HPGlasses> findHPGlasses(List<Circle> circles, List<LineSegment> lineSegments,
             double margin)
         {
             // This function is only valid when there are at least 1 circle
@@ -3296,6 +3325,8 @@ namespace INFOIBV
 
             return inputBitmap;
         }
+
+        #endregion
         
     }
 }
