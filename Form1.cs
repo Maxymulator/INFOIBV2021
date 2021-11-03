@@ -202,7 +202,7 @@ namespace INFOIBV
                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
             }
 
-            circles = pruneCircleList(circles);
+            circles = pruneCircleList(circles, 10, 10);
             List<HPGlasses> found2 = findConnectedCircles(circles, line, 5d);
 
             //line = pruneLineSegments(line);
@@ -2895,10 +2895,8 @@ namespace INFOIBV
             return output.Where(ls => ls is not null).ToList();
         }
         
-        private List<Circle> pruneCircleList(List<Circle> circles)
+        private List<Circle> pruneCircleList(List<Circle> circles, int centerMargin, int radiusMargin)
         {
-            int centerMargin = 2;
-            int radiusMargin = 2;
             Circle[] lsArray = circles.ToArray();
             for (int i = 0; i < lsArray.Length; i++) // Iterate over the circles
             for (int j = 0; j < lsArray.Length; j++) // Iterate over the circles
@@ -3232,123 +3230,6 @@ namespace INFOIBV
                 // Else return the best candidate
                 return lsOnCircle[indexOfClosest];
             }
-        }
-        
-        private List<HPGlasses> findConnectedCircles2(List<Circle> circles, List<LineSegment> lineSegments, double margin)
-        {
-            // This function is only valid when there are at least 2 circles and at least 1 line segment
-            if (circles.Count < 2 && lineSegments.Count < 1) return null;
-
-            List<HPGlasses> foundGlasses = new List<HPGlasses>();
-            
-            // Iterate over all circles
-            for (int circleIndex = 0; circleIndex < circles.Count; circleIndex++)
-            {
-                // Find all line segments that start or end on this circle
-                List<LineSegment> lsOnCircle =
-                    findLineSegmentsThatStartOnCircle(circles[circleIndex], lineSegments, margin);
-
-                // Iterate over all circles
-                for (int internalCircleIndex = 0; internalCircleIndex < circles.Count; internalCircleIndex++)
-                {
-                    // Only check other circles
-                    if(internalCircleIndex == circleIndex)
-                        continue;
-
-                    // Get all line segments that connect this circle with the overarching circle
-                    List<LineSegment> lsThatConnectTwoCircles =
-                        findLineSegmentsThatStartOnCircle(circles[internalCircleIndex], lsOnCircle, margin);
-
-                    List<LineSegment> lsThatConnectTwoCirclesPruned = new List<LineSegment>();
-
-                    // Prune the list to make sure the line segments actually connect the two circles
-                    foreach (var ls in lsThatConnectTwoCircles)
-                    {
-                        // Check if the line segments does indeed connect both circles
-                        if (circles[circleIndex].isPointOnCircle(ls.Point1, margin) &&
-                            circles[internalCircleIndex].isPointOnCircle(ls.Point2, margin)
-                            || circles[circleIndex].isPointOnCircle(ls.Point2, margin) &&
-                            circles[internalCircleIndex].isPointOnCircle(ls.Point1, margin))
-                        {
-                            lsThatConnectTwoCirclesPruned.Add(ls);
-                        }
-                    }
-                    
-                    // Create an array to store the slope difference for each line segment in comparison to the center line of the circles
-                    double[] lsSlopeDiffFromCircleLine = new double[lsThatConnectTwoCirclesPruned.Count];
-                   
-                    // Iterate over all found line segments
-                    for (int lsIndex = 0; lsIndex < lsThatConnectTwoCirclesPruned.Count; lsIndex++)
-                    {
-                        // Store the slope difference
-                        lsSlopeDiffFromCircleLine[lsIndex] =
-                            CalcSlopeDiff(circles[circleIndex], circles[internalCircleIndex],
-                                lsThatConnectTwoCirclesPruned[lsIndex]);
-                    }
-
-                    // Create a var to indicate the index of the line segment which is the most parallel to the center line of the circles
-                    int lsIndexWithLowestSlopeDiff = 0;
-
-                    // Iterate over all line segments and find the one that is most parallel to the center line of the circles
-                    for (int i = 1; i < lsSlopeDiffFromCircleLine.Length; i++) // Start at 1, because index 0 is already stored as lowest for a default value
-                    {
-                        if (lsSlopeDiffFromCircleLine[i] < lsSlopeDiffFromCircleLine[lsIndexWithLowestSlopeDiff]) // take the lowest slope diff
-                            lsIndexWithLowestSlopeDiff = i;
-                        else if (Math.Abs(lsSlopeDiffFromCircleLine[i] - lsSlopeDiffFromCircleLine[lsIndexWithLowestSlopeDiff]) < 0.001) // if the slope diff is very similar, take the shortest line
-                        {
-                            lsIndexWithLowestSlopeDiff = lsThatConnectTwoCirclesPruned[i].Length <
-                                                         lsThatConnectTwoCirclesPruned[lsIndexWithLowestSlopeDiff].Length
-                                ? i
-                                : lsIndexWithLowestSlopeDiff;
-                        }
-                    } 
-                    
-                    // Bool denoting whether this pair of glasses should be added to the list
-                    bool newHPGlasses = true;
-
-                    // Check if these glasses were already found
-                    foreach (var hpg in foundGlasses)
-                    {
-                        if ((hpg.Circle1 == circles[circleIndex] && hpg.Circle2 == circles[internalCircleIndex] ||
-                             hpg.Circle1 == circles[internalCircleIndex] && hpg.Circle2 == circles[circleIndex])
-                            && hpg.NoseBridge == lsThatConnectTwoCirclesPruned[lsIndexWithLowestSlopeDiff])
-                        {
-                            newHPGlasses = false;
-                        }
-                    }
-
-                    // Add the found HP Glasses to the output list if they are new and if there are glasses to add
-                    if(lsThatConnectTwoCirclesPruned.Count > 0 && newHPGlasses)
-                        foundGlasses.Add(new HPGlasses(circles[circleIndex], lsThatConnectTwoCirclesPruned[lsIndexWithLowestSlopeDiff], circles[internalCircleIndex]));
-                    
-                }
-            }
-
-            return foundGlasses;
-
-            double CalcSlopeDiff(Circle c1, Circle c2, LineSegment ls)
-            {
-                double c1X = c1.Center.X;
-                double c1Y = c1.Center.Y;
-                double c2X = c2.Center.X;
-                double c2Y = c2.Center.Y;
-                double slopeCircleLine = (c2Y - c1Y) / (c2X - c1X);
-            
-                double ls1X = ls.Point1.X;
-                double ls1Y = ls.Point1.Y;
-                double ls2X = ls.Point2.X;
-                double ls2Y = ls.Point2.Y;
-                double slopeNoseBridge = (ls2Y - ls1Y) / (ls2X - ls1X);
-
-                if (slopeCircleLine > 0 && slopeNoseBridge > 0)
-                    return Math.Abs(slopeCircleLine - slopeNoseBridge);
-                if (slopeCircleLine < 0 && slopeNoseBridge < 0)
-                    return Math.Abs(-slopeCircleLine + slopeNoseBridge);
-                if (slopeCircleLine < 0 && slopeNoseBridge > 0 || slopeCircleLine > 0 && slopeNoseBridge < 0)
-                    return Math.Abs(slopeCircleLine) + Math.Abs(slopeNoseBridge);
-                return 100d;
-            }
-            
         }
 
         /// <summary>
