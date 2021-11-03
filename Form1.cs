@@ -17,15 +17,15 @@ namespace INFOIBV
         // Added so all changes can be made in one place
         private const byte FilterSize = 3;
         private const byte GreyscaleThreshold = 160;
-        private const byte HoughPeakThreshold = 75;
+        private const byte HoughPeakThreshold = 65;
         private const int CrossingThreshold = 1;
-        private const int MinLineLength = 20;
-        private const int MaxLineGap = 0;
+        private const int MinLineLength = 15;
+        private const int MaxLineGap = 5;
         private const int minimumIntesityThreshold = 100;
-        private const double rMin = 25;
-        private const double rMax = 50;
+        private const double rMin = 20;
+        private const double rMax = 40;
         private const int stepsPerR = 2;
-        private const int margeCircles = 10;
+        private const int margeCircles = 50;
         
         private static readonly Color CircleColor = Color.Blue;
         private static readonly Color FullLineColor = Color.Red;
@@ -212,7 +212,7 @@ namespace INFOIBV
             }
 
             circles = pruneCircleList(circles, 10, 10);
-            List<HPGlasses> found2 = findConnectedCircles(circles, line, 5d);
+            List<HPGlasses> found2 = findConnectedCircles(circles, line, 7d);
             
             line = pruneLineSegments(line);
 
