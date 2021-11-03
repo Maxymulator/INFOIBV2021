@@ -17,7 +17,7 @@ namespace INFOIBV
         // Added so all changes can be made in one place
         private const byte FilterSize = 3;
         private const byte GreyscaleThreshold = 160;
-        private const byte HoughPeakThreshold = 70;
+        private const byte HoughPeakThreshold = 72;
         private const int CrossingThreshold = 1;
         private const int MinLineLength = 20;
         private const int MaxLineGap = 3;
