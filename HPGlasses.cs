@@ -109,7 +109,7 @@ namespace INFOIBV
             return percentage;
         }
 
-        public int GetMinXValue()
+        public int GetMinXValue(int min)
         {
             int xMin = Circle1.Center.X - (int)Math.Round(Circle1.Radius);
 
@@ -129,33 +129,33 @@ namespace INFOIBV
                 if (EarPiece2.Point1.X < xMin)
                     xMin = EarPiece2.Point1.X;
 
-            return xMin;
+            return xMin > min ? xMin : min;
         }
 
-        public int GetMaxXValue()
+        public int GetMaxXValue(int max)
         {
-            int xMin = Circle1.Center.X + (int)Math.Round(Circle1.Radius);
+            int xMax = Circle1.Center.X + (int)Math.Round(Circle1.Radius);
 
             if (NoseBridge is not null)
-                if (NoseBridge.Point2.X > xMin)
-                    xMin = NoseBridge.Point2.X;
+                if (NoseBridge.Point2.X > xMax)
+                    xMax = NoseBridge.Point2.X;
 
             if (Circle2 is not null)
-                if (Circle2.Center.X + (int)Math.Round(Circle2.Radius) > xMin)
-                    xMin = Circle2.Center.X + (int)Math.Round(Circle2.Radius);
+                if (Circle2.Center.X + (int)Math.Round(Circle2.Radius) > xMax)
+                    xMax = Circle2.Center.X + (int)Math.Round(Circle2.Radius);
 
             if (EarPiece1 is not null)
-                if (EarPiece1.Point2.X > xMin)
-                    xMin = EarPiece1.Point2.X;
+                if (EarPiece1.Point2.X > xMax)
+                    xMax = EarPiece1.Point2.X;
 
             if (EarPiece2 is not null)
-                if (EarPiece2.Point2.X > xMin)
-                    xMin = EarPiece2.Point2.X;
+                if (EarPiece2.Point2.X > xMax)
+                    xMax = EarPiece2.Point2.X;
 
-            return xMin;
+            return xMax < max ? xMax : max;
         }
 
-        public int GetMinYValue()
+        public int GetMinYValue(int min)
         {
             int yMin = Circle1.Center.Y - (int)Math.Round(Circle1.Radius);
 
@@ -188,10 +188,10 @@ namespace INFOIBV
                     yMin = EarPiece2.Point2.Y;
             }
 
-            return yMin;
+            return yMin > min ? yMin : min;
         }
 
-        public int GetMaxYValue()
+        public int GetMaxYValue(int max)
         {
             int yMax = Circle1.Center.Y + (int)Math.Round(Circle1.Radius);
 
@@ -224,7 +224,7 @@ namespace INFOIBV
                     yMax = EarPiece2.Point2.Y;
             }
 
-            return yMax;
+            return yMax < max ? yMax : max;
         }
 
     }
