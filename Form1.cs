@@ -19,8 +19,8 @@ namespace INFOIBV
         private const byte GreyscaleThreshold = 160;
         private const byte HoughPeakThreshold = 65;
         private const int CrossingThreshold = 1;
-        private const int MinLineLength = 15;
-        private const int MaxLineGap = 5;
+        private const int MinLineLength = 20;
+        private const int MaxLineGap = 3;
         private const int minimumIntesityThreshold = 100;
         private const double rMin = 20;
         private const double rMax = 40;
@@ -212,7 +212,7 @@ namespace INFOIBV
             }
 
             circles = pruneCircleList(circles, 10, 10);
-            List<HPGlasses> found2 = findConnectedCircles(circles, line, 7d);
+            List<HPGlasses> found2 = findConnectedCircles(circles, line, 10d);
             
             line = pruneLineSegments(line);
 
@@ -1578,7 +1578,7 @@ namespace INFOIBV
         private byte[,] openImage(byte[,] inputImage, byte[,] structuringElement)
         {
             //erosion followed by dilation
-            return dilateImage(erodeImage(inputImage, structuringElement), structuringElement);
+            return dilateImageParallel(erodeImageParallel(inputImage, structuringElement), structuringElement);
         }
 
         /// <summary>
@@ -1590,7 +1590,7 @@ namespace INFOIBV
         private byte[,] closeImage(byte[,] inputImage, byte[,] structuringElement)
         {
             //dilation followed by erosion
-            return erodeImage(dilateImage(inputImage, structuringElement), structuringElement);
+            return erodeImageParallel(dilateImageParallel(inputImage, structuringElement), structuringElement);
         }
 
         /// <summary>
