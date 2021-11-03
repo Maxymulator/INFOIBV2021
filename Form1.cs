@@ -19,12 +19,13 @@ namespace INFOIBV
         private const byte GreyscaleThreshold = 160;
         private const byte HoughPeakThreshold = 75;
         private const int CrossingThreshold = 1;
-        private const int MinLineLength = 30;
+        private const int MinLineLength = 20;
         private const int MaxLineGap = 0;
         private const int minimumIntesityThreshold = 100;
-        private const double rMin = 30;
+        private const double rMin = 25;
         private const double rMax = 50;
         private const int stepsPerR = 2;
+        private const int margeCircles = 10;
         
         private static readonly Color CircleColor = Color.Blue;
         private static readonly Color FullLineColor = Color.Red;
@@ -173,26 +174,34 @@ namespace INFOIBV
             // convert image to grayscale
             byte[,] workingImage = convertToGrayscale(Image);
 
+            // invert Image
+            workingImage = invertImage(workingImage);
+
             // adjust the contrast
-            //workingImage = adjustContrast(workingImage);
+            workingImage = adjustContrast(workingImage);
 
             // apply median filter
-            //workingImage = medianFilterParallel(workingImage, FilterSize);
+            workingImage = medianFilterParallel(workingImage, 3);
+
+            //apply closing
+            workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
 
             // apply edge detection
-            //workingImage = edgeMagnitude(workingImage);
+            workingImage = edgeMagnitude(workingImage);
 
 
             // apply a threshold
-            workingImage = thresholdImage(workingImage, GreyscaleThreshold);
+            workingImage = thresholdImage(workingImage, 254);
 
             //apply closing
-            //workingImage = closeImage(workingImage,createStructuringElement(StructuringElementShape.Square,3));
+            workingImage = closeImage(workingImage,createStructuringElement(StructuringElementShape.Plus,5));
+
+
 
             //workingImage = closeImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             //workingImage = openImage(workingImage, createStructuringElement(StructuringElementShape.Square, 3));
             List<Circle> circles = peakFindingCircle(new BinaryImage(workingImage));
-            
+
             //workingImage = thresholdImage(workingImage, 255);
             // apply the hough transform
             List<Point> centers = peakFinding(new BinaryImage(workingImage), HoughPeakThreshold);
@@ -201,11 +210,16 @@ namespace INFOIBV
             {
                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
             }
+<<<<<<< Updated upstream
 
             circles = pruneCircleList(circles, 10, 10);
+=======
+            //circles.RemoveAt(2);
+            circles = pruneCircleList(circles);
+>>>>>>> Stashed changes
             List<HPGlasses> found2 = findConnectedCircles(circles, line, 5d);
-
-            //line = pruneLineSegments(line);
+            
+            line = pruneLineSegments(line);
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -225,7 +239,7 @@ namespace INFOIBV
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
             OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
-            OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, 0, HpGlassesColor);
+            OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, 20, HpGlassesColor);
 
             // display output image
             pictureBox2.Image = OutputImage;
@@ -2014,7 +2028,7 @@ namespace INFOIBV
                     
                 }
             }
-            threshold3D(ref imageByte, thresholdValue-5);
+            threshold3D(ref imageByte, thresholdValue-margeCircles);
 
             return findCenters(imageByte);
 
