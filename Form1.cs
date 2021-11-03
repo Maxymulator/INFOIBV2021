@@ -212,7 +212,7 @@ namespace INFOIBV
             }
 
             circles = pruneCircleList(circles, 10, 10);
-            //List<HPGlasses> found2 = findConnectedCircles(circles, line, 10d);
+            List<HPGlasses> found2 = findConnectedCircles(circles, line, 10d);
             
             line = pruneLineSegments(line);
 
@@ -234,7 +234,8 @@ namespace INFOIBV
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
             OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
-            //OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, 20, HpGlassesColor);
+            
+            OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, 20, HpGlassesColor);
 
             // display output image
             pictureBox2.Image = OutputImage;
@@ -3250,7 +3251,9 @@ namespace INFOIBV
         private Bitmap visualiseHPGlassesColor(Bitmap inputBitmap, byte[,] inputImage,
             List<HPGlasses> hpGlassesList, int minCertainty, Color color)
         {
-            // Create a binary image to store all the lines
+            if (hpGlassesList is null)
+                return inputBitmap;
+                // Create a binary image to store all the lines
             BinaryImage lineImage = new BinaryImage(inputImage.GetLength(0), inputImage.GetLength(1));
             
             // Create a graphics component
