@@ -25,7 +25,7 @@ namespace INFOIBV
         private const double rMin = 15;
         private const double rMax = 40;
         private const int stepsPerR = 2;
-        private const int margeCircles = 270;
+        private const int margeCircles = 250;
         
         private static readonly Color CircleColor = Color.Blue;
         private static readonly Color FullLineColor = Color.Red;
@@ -212,7 +212,7 @@ namespace INFOIBV
             }
 
             circles = pruneCircleList(circles, 10, 10);
-            //List<HPGlasses> found2 = findConnectedCircles(circles, line, 10d);
+            List<HPGlasses> found2 = findConnectedCircles(circles, line, 10d);
             
             line = pruneLineSegments(line);
 
@@ -234,7 +234,7 @@ namespace INFOIBV
             //OutputImage = drawFoundLines(OutputImage, centers, FullLineColor);
             OutputImage = visualiseHoughLineSegmentsColors(OutputImage, workingImage, line, LineSegmentColor);
             //OutputImage = visualiseCrossingsColor(OutputImage, CrossingThreshold, 3, centers, CrossingColor);
-            //OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, 20, HpGlassesColor);
+            OutputImage = visualiseHPGlassesColor(OutputImage, workingImage, found2, 20, HpGlassesColor);
 
             // display output image
             pictureBox2.Image = OutputImage;
