@@ -22,7 +22,7 @@ namespace INFOIBV
         private const int MinLineLength = 20;
         private const int MaxLineGap = 3;
         private const int minimumIntesityThreshold = 100;
-        private const double rMin = 20;
+        private const double rMin = 15;
         private const double rMax = 40;
         private const int stepsPerR = 2;
         private const int margeCircles = 50;
