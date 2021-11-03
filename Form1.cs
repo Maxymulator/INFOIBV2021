@@ -210,13 +210,8 @@ namespace INFOIBV
             {
                 line.AddRange(houghLineDetection(new BinaryImage(workingImage), center, MinLineLength, MaxLineGap));
             }
-<<<<<<< Updated upstream
 
             circles = pruneCircleList(circles, 10, 10);
-=======
-            //circles.RemoveAt(2);
-            circles = pruneCircleList(circles);
->>>>>>> Stashed changes
             List<HPGlasses> found2 = findConnectedCircles(circles, line, 5d);
             
             line = pruneLineSegments(line);
