@@ -2954,8 +2954,12 @@ namespace INFOIBV
             // Iterate over the given line segments
             foreach (var ls in lineSegments)
             {
-                // Add this line segment to the found list if either of its points are on the circle within the given margin
-                if(circle.isPointOnCircle(ls.Point1, margin) || circle.isPointOnCircle(ls.Point2, margin))
+                // Determine whether the points of the line segment lie on the circle
+                bool p1OnC = circle.isPointOnCircle(ls.Point1, margin);
+                bool p2OnC = circle.isPointOnCircle(ls.Point2, margin);
+                
+                // Add this line segment to the found list if exactly one of its points are on the circle within the given margin
+                if (p1OnC && !p2OnC || p2OnC && !p1OnC)
                     found.Add(ls);
             }
 
