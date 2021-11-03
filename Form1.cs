@@ -2920,6 +2920,13 @@ namespace INFOIBV
                         Math.Abs(c1.Center.Y - c2.Center.Y) < centerMargin)
                         return true;
                 }
+                
+                double dist = Math.Sqrt(Math.Pow((c2.Center.Y - c1.Center.Y), 2) + Math.Pow((c2.Center.X - c1.Center.X), 2));
+
+                if (dist < c1.Radius + c2.Radius)
+                {
+                    return true;
+                }
 
                 return false;
             }
@@ -3259,10 +3266,10 @@ namespace INFOIBV
                 if (hpg.GetCertainty() < minCertainty) continue;
                 
                 // Get the corner values of the bounding box
-                Point topL = new Point(hpg.GetMinXValue(), hpg.GetMinYValue());
-                Point botL = new Point(hpg.GetMinXValue(), hpg.GetMaxYValue());
-                Point topR = new Point(hpg.GetMaxXValue(), hpg.GetMinYValue());
-                Point botR = new Point(hpg.GetMaxXValue(), hpg.GetMaxYValue());
+                Point topL = new Point(hpg.GetMinXValue(0), hpg.GetMinYValue(0));
+                Point botL = new Point(hpg.GetMinXValue(0), hpg.GetMaxYValue(inputImage.GetLength(1)));
+                Point topR = new Point(hpg.GetMaxXValue(inputImage.GetLength(0)), hpg.GetMinYValue(0));
+                Point botR = new Point(hpg.GetMaxXValue(inputImage.GetLength(0)), hpg.GetMaxYValue(inputImage.GetLength(1)));
                 
                 // Plot the lines of the bounding box in the line image
                 lineImage = plotLineBresenham(lineImage, topL, topR); // top side
@@ -3271,7 +3278,7 @@ namespace INFOIBV
                 lineImage = plotLineBresenham(lineImage, botR, topR); // right side
                 
                 // Draw the certainty percentage to the image
-                g.DrawString($"{hpg.GetCertainty()}% sure", new Font("Tahoma", 8), Brushes.Yellow, new PointF(hpg.GetMinXValue() + 2, hpg.GetMaxYValue() - 13));
+                g.DrawString($"{hpg.GetCertainty()}% sure", new Font("Tahoma", 8), new SolidBrush(color), new PointF(hpg.GetMinXValue(0) + 2, hpg.GetMaxYValue(inputImage.GetLength(1)) - 13));
             }
 
             // Iterate over the output image
